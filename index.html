@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vibe App Store</title>
+  <style>
+    :root {
+      --bg:       #0c0c0e;
+      --surface:  #13131a;
+      --border:   #2a2a38;
+      --accent:   #a3ff57;
+      --accent2:  #57c8ff;
+      --muted:    #5a5a72;
+      --text:     #e2e2f0;
+      --text-dim: #9090aa;
+      --danger:   #ff5757;
+      --mono: ui-monospace, 'Cascadia Code', 'Fira Code', 'Source Code Pro', Menlo, monospace;
+      --sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --radius: 6px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── noise grain overlay ─────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      pointer-events: none;
+      z-index: 999;
+      opacity: .025;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    }
+
+    /* ── header ──────────────────────────────────── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 0 clamp(16px, 5vw, 48px);
+    }
+    .header-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      gap: 16px;
+    }
+    .logo {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+    .logo span { color: var(--text-dim); font-weight: 400; }
+    .header-meta {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .header-meta b { color: var(--accent); font-weight: 600; }
+
+    /* ── hero ────────────────────────────────────── */
+    .hero {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 64px clamp(16px, 5vw, 48px) 40px;
+    }
+    .hero-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 14px;
+    }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 52px);
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -.02em;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .hero h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+    .hero p {
+      font-size: 16px;
+      color: var(--text-dim);
+      max-width: 480px;
+      margin-bottom: 32px;
+    }
+
+    /* ── search ──────────────────────────────────── */
+    .search-wrap {
+      position: relative;
+      max-width: 420px;
+    }
+    .search-wrap svg {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+    #search {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px 10px 40px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s;
+    }
+    #search::placeholder { color: var(--muted); }
+    #search:focus { border-color: var(--accent); }
+
+    /* ── main layout ─────────────────────────────── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 clamp(16px, 5vw, 48px) 80px;
+    }
+
+    /* ── section header ──────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .section-header h2 {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    #tool-count {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: rgba(163,255,87,.12);
+      color: var(--accent);
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    /* ── grid ────────────────────────────────────── */
+    #tool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+      margin-bottom: 64px;
+    }
+
+    /* ── card ────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color .15s, transform .15s;
+      animation: fadeIn .3s ease both;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .card:hover {
+      border-color: #3a3a52;
+      transform: translateY(-2px);
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -.01em;
+    }
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.5;
+      flex: 1;
+    }
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .04em;
+      padding: 2px 8px;
+      border-radius: 3px;
+      background: rgba(87, 200, 255, .1);
+      color: var(--accent2);
+      border: 1px solid rgba(87,200,255,.15);
+    }
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-top: 4px;
+      border-top: 1px solid var(--border);
+    }
+    .upvote-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 5px 10px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .upvote-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .upvote-btn.voted { border-color: var(--accent); color: var(--accent); background: rgba(163,255,87,.08); }
+    .upvote-btn .arrow { font-size: 11px; line-height: 1; }
+    .try-btn {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--bg);
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      padding: 5px 14px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity .15s, transform .1s;
+      display: inline-block;
+    }
+    .try-btn:hover { opacity: .88; transform: scale(1.02); }
+
+    /* ── empty state ─────────────────────────────── */
+    .empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+    .empty span { font-size: 32px; display: block; margin-bottom: 12px; }
+
+    /* ── divider ─────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0 0 48px;
+    }
+
+    /* ── submit section ──────────────────────────── */
+    .submit-section h2 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -.01em;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .submit-section p {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 28px;
+    }
+    form {
+      max-width: 540px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    input[type=text], input[type=url], textarea {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-family: var(--sans);
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s;
+      resize: vertical;
+    }
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+    input:focus, textarea:focus { border-color: var(--accent); }
+    textarea { min-height: 80px; }
+    .submit-btn {
+      align-self: flex-start;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      color: var(--bg);
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      padding: 10px 24px;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+    .submit-btn:hover { opacity: .88; }
+    .submit-btn:active { transform: scale(.98); }
+
+    /* ── flash message ───────────────────────────── */
+    .flash {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(163,255,87,.1);
+      border: 1px solid rgba(163,255,87,.25);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+      animation: slideIn .25s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .flash.hidden { display: none; }
+
+    /* ── footer ──────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 20px clamp(16px, 5vw, 48px);
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">⚡ vibe<span>.store</span></div>
+    <div class="header-meta" id="header-count">— tools</div>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-label">// open directory</div>
+  <h1>Discover &amp; share<br><em>AI-built tools</em></h1>
+  <p>A community directory of vibe-coded apps. Browse what people are shipping, try them out, and add your own.</p>
+  <div class="search-wrap">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input type="text" id="search" placeholder="search tools..." autocomplete="off">
+  </div>
+</div>
+
+<main>
+  <div class="section-header">
+    <h2>All Tools</h2>
+    <span id="tool-count">0</span>
+  </div>
+
+  <div id="tool-grid"></div>
+
+  <hr class="divider">
+
+  <section class="submit-section">
+    <h2>Submit a Tool</h2>
+    <p>Built something with AI? Share it with the community.</p>
+
+    <div id="flash" class="flash hidden">✓ Tool added — scroll up to see it!</div>
+
+    <form id="submit-form">
+      <div class="field">
+        <label for="f-title">Title</label>
+        <input type="text" id="f-title" placeholder="My Awesome Tool" required maxlength="80">
+      </div>
+      <div class="field">
+        <label for="f-desc">Description</label>
+        <textarea id="f-desc" placeholder="What does it do? Keep it punchy." required maxlength="200"></textarea>
+      </div>
+      <div class="field">
+        <label for="f-url">URL</label>
+        <input type="url" id="f-url" placeholder="https://your-tool.vercel.app" required>
+      </div>
+      <div class="field">
+        <label for="f-tags">Tags <span style="font-weight:400;text-transform:none;letter-spacing:0">(comma-separated)</span></label>
+        <input type="text" id="f-tags" placeholder="ai, dev, productivity">
+      </div>
+      <button type="submit" class="submit-btn">+ Add Tool</button>
+    </form>
+  </section>
+</main>
+
+<footer>built with vibes · open source · no accounts needed</footer>
+
+<script>
+  // ── data ───────────────────────────────────────────────
+  const tools = [
+    { id: 1, title: 'Resume Roaster',     desc: 'Paste your resume, get brutally honest AI feedback.',             url: 'https://resume-roaster.vercel.app', tags: ['career','ai'],        votes: 38, voted: false },
+    { id: 2, title: 'Commit Message AI',  desc: 'Generate perfect git commit messages from your diff.',            url: 'https://commitai.dev',              tags: ['dev','productivity'], votes: 27, voted: false },
+    { id: 3, title: 'Cold Email Crafter', desc: 'Write personalized cold emails that actually get replies.',       url: 'https://coldemailcrafter.com',      tags: ['sales','writing'],    votes: 19, voted: false },
+    { id: 4, title: 'SQL Explainer',      desc: 'Paste any SQL query and get a plain-English explanation.',        url: 'https://sqlexplainer.app',          tags: ['dev','sql'],          votes: 14, voted: false },
+    { id: 5, title: 'Landing Page Critic',desc: 'AI critique of your landing page copy and structure.',            url: 'https://lpcritic.com',              tags: ['marketing','ai'],     votes: 11, voted: false },
+  ];
+  let nextId = 6;
+  let query  = '';
+
+  // ── utils ──────────────────────────────────────────────
+  function esc(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── render ─────────────────────────────────────────────
+  function render() {
+    const q = query.toLowerCase().trim();
+    const filtered = q
+      ? tools.filter(t =>
+          t.title.toLowerCase().includes(q) ||
+          t.desc.toLowerCase().includes(q) ||
+          t.tags.some(tag => tag.toLowerCase().includes(q))
+        )
+      : [...tools];
+
+    const grid = document.getElementById('tool-grid');
+    const count = document.getElementById('tool-count');
+    const hcount = document.getElementById('header-count');
+
+    count.textContent = filtered.length + (filtered.length === 1 ? ' tool' : ' tools');
+    hcount.textContent = tools.length + (tools.length === 1 ? ' tool' : ' tools');
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `<div class="empty"><span>🔍</span>${q ? 'No tools match "' + esc(q) + '"' : 'No tools yet.'}</div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(t => `
+      <article class="card" data-id="${t.id}">
+        <div class="card-title">${esc(t.title)}</div>
+        <div class="card-desc">${esc(t.desc)}</div>
+        <div class="card-tags">${t.tags.map(tag => `<span class="tag">${esc(tag)}</span>`).join('')}</div>
+        <div class="card-footer">
+          <button class="upvote-btn ${t.voted ? 'voted' : ''}" data-id="${t.id}">
+            <span class="arrow">▲</span>
+            <span class="vote-num">${t.votes}</span>
+          </button>
+          <a class="try-btn" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">Try it →</a>
+        </div>
+      </article>
+    `).join('');
+  }
+
+  // ── upvote ─────────────────────────────────────────────
+  document.getElementById('tool-grid').addEventListener('click', e => {
+    const btn = e.target.closest('.upvote-btn');
+    if (!btn) return;
+    const id = Number(btn.dataset.id);
+    const tool = tools.find(t => t.id === id);
+    if (!tool) return;
+    tool.voted = !tool.voted;
+    tool.votes += tool.voted ? 1 : -1;
+    render();
+  });
+
+  // ── search ─────────────────────────────────────────────
+  document.getElementById('search').addEventListener('input', e => {
+    query = e.target.value;
+    render();
+  });
+
+  // ── submit ─────────────────────────────────────────────
+  document.getElementById('submit-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const title = document.getElementById('f-title').value.trim();
+    const desc  = document.getElementById('f-desc').value.trim();
+    const url   = document.getElementById('f-url').value.trim();
+    const raw   = document.getElementById('f-tags').value;
+    const tags  = raw.split(',').map(t => t.trim()).filter(Boolean).slice(0, 5);
+
+    tools.unshift({ id: nextId++, title, desc, url, tags, votes: 1, voted: true });
+    e.target.reset();
+    query = '';
+    document.getElementById('search').value = '';
+    render();
+
+    const flash = document.getElementById('flash');
+    flash.classList.remove('hidden');
+    setTimeout(() => flash.classList.add('hidden'), 4000);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // ── init ───────────────────────────────────────────────
+  render();
+</script>
+</body>
+</html>
