@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vibe App Store — 管理後台</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/admin-style.css">
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo">⚡ vibe<span>.store</span> <span class="admin-label">ADMIN</span></div>
+      <a href="/" class="admin-back-link">← 回到前台</a>
+    </div>
+  </header>
+
+  <div class="admin-page">
+    <h1>管理後台</h1>
+    <p>輸入管理員密鑰後即可審核工具與處理檢舉。</p>
+
+    <div class="key-form">
+      <input type="password" id="admin-key" placeholder="輸入 ADMIN_KEY..." autocomplete="off">
+      <button class="submit-btn" id="admin-login-btn">載入</button>
+    </div>
+
+    <div id="admin-content" class="admin-hidden">
+      <div id="dash-cards" class="dash-cards"></div>
+
+      <div class="admin-section">
+        <h2>待審核工具</h2>
+        <div id="pending-tools"></div>
+      </div>
+
+      <div class="admin-section">
+        <h2>待處理檢舉</h2>
+        <div id="pending-reports"></div>
+      </div>
+
+      <div class="admin-section">
+        <h2>違規紀錄（最近）</h2>
+        <div id="violations-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/admin.js"></script>
+</body>
+</html>

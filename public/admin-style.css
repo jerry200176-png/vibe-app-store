@@ -1,0 +1,37 @@
+.admin-page { max-width: 900px; margin: 0 auto; padding: 32px clamp(16px,5vw,48px) 80px; }
+.admin-page h1 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+.admin-page > p { font-size: 13px; color: var(--text-dim); margin-bottom: 24px; }
+.key-form { display: flex; gap: 10px; margin-bottom: 32px; }
+.key-form input { flex: 1; }
+.dash-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: 12px; margin-bottom: 32px; }
+.dash-card { text-align: center; }
+.admin-section { margin-bottom: 40px; }
+.admin-section h2 {
+  font-family: var(--mono); font-size: 12px; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--muted); margin-bottom: 12px;
+}
+.admin-item {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; margin-bottom: 10px;
+}
+.admin-item-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+.admin-item-title { font-weight: 700; font-size: 14px; }
+.admin-item-meta { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.admin-item-meta a { color: var(--accent2); }
+.admin-item-desc { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; }
+.admin-item-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.admin-btn {
+  font-family: var(--mono); font-size: 11px; padding: 5px 14px;
+  border-radius: var(--radius); border: 1px solid var(--border);
+  background: transparent; color: var(--text-dim); cursor: pointer; transition: all .15s;
+}
+.admin-btn:hover { border-color: var(--accent); color: var(--accent); }
+.admin-btn.approve { border-color: rgba(163,255,87,.3); color: var(--accent); }
+.admin-btn.approve:hover { background: rgba(163,255,87,.1); }
+.admin-btn.reject { border-color: rgba(255,87,87,.3); color: var(--danger); }
+.admin-btn.reject:hover { background: rgba(255,87,87,.08); }
+.admin-btn.dismiss { border-color: rgba(90,90,114,.4); }
+.empty-admin { font-size: 13px; color: var(--muted); padding: 16px 0; }
+.admin-label { color: var(--danger); font-weight: 400; margin-left: 8px; }
+.admin-back-link { font-size: 12px; color: var(--accent2); text-decoration: none; }
+.admin-hidden { display: none; }

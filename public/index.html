@@ -16,12 +16,11 @@
     <div class="header-right">
       <div class="points-wrap">
         <div class="points-pill" id="points-display"></div>
-        <div class="points-tooltip">你的虛擬點數餘額<br>免費工具不扣點，付費工具按標示扣除</div>
+        <div class="points-tooltip">虛擬體驗點數（僅供試玩）<br>免費工具不扣點，付費工具按標示扣除<br><em>此點數存在瀏覽器，不可轉移或兌換</em></div>
       </div>
       <div class="header-meta" id="header-count"></div>
     </div>
   </div>
-  <!-- Tab nav -->
   <nav class="tab-nav" aria-label="主要導覽">
     <div class="tab-nav-inner">
       <button class="tab active" data-tab="browse">
@@ -32,9 +31,9 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         提交工具
       </button>
-      <button class="tab" data-tab="creator">
+      <button class="tab" data-tab="studio">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-        創作者
+        創作者工作室
       </button>
     </div>
   </nav>
@@ -53,6 +52,15 @@
   </div>
 
   <main>
+    <!-- Followed creators section -->
+    <section id="followed-section" class="followed-section hidden">
+      <div class="section-header">
+        <h2>追蹤的創作者</h2>
+        <span class="section-badge follow-badge">你的追蹤</span>
+      </div>
+      <div id="followed-grid" class="featured-grid"></div>
+    </section>
+
     <!-- Featured -->
     <section id="featured-section" class="featured-section hidden">
       <div class="section-header">
@@ -95,8 +103,11 @@
       <div class="form-page-header">
         <h1>提交你的工具</h1>
         <p>用 AI 做了什麼有趣的東西？讓更多人發現它。</p>
+        <div class="notice-box">
+          提交後需經審核才會公開上架。請確認工具連結可正常使用且內容符合<a href="#" id="guidelines-link-submit">社群準則</a>。
+        </div>
       </div>
-      <div id="flash" class="flash hidden">✓ 工具已新增！切換到「瀏覽工具」查看。</div>
+      <div id="flash" class="flash hidden"></div>
       <form id="submit-form">
         <div class="field">
           <label for="f-title">工具名稱 <span class="required">*</span></label>
@@ -117,7 +128,7 @@
         </div>
         <div class="field-row">
           <div class="field">
-            <label for="f-cost">費用（點數）<span class="hint"> 0 = 免費</span></label>
+            <label for="f-cost">費用（體驗點數）<span class="hint"> 0 = 免費</span></label>
             <input type="number" id="f-cost" value="0" min="0" max="100">
           </div>
           <div class="field">
@@ -141,19 +152,53 @@
   </main>
 </div>
 
-<!-- ── Creator tab ─────────────────────────────────────── -->
-<div id="tab-creator" class="tab-panel">
+<!-- ── Creator Studio tab ─────────────────────────────── -->
+<div id="tab-studio" class="tab-panel">
   <main>
     <div class="form-page">
       <div class="form-page-header">
-        <h1>創作者收益查詢</h1>
-        <p>輸入創作者名稱，查看旗下工具的使用量與累積點數收益。</p>
+        <h1>創作者工作室</h1>
+        <p>查看你的工具表現、管理已提交的工具，以及了解精選資格。</p>
       </div>
+
+      <!-- Lookup by name -->
       <div class="creator-lookup">
         <input type="text" id="creator-name-input" placeholder="輸入創作者名稱..." maxlength="40">
         <button id="creator-lookup-btn" class="submit-btn">查詢</button>
       </div>
+
       <div id="creator-stats" class="creator-stats hidden"></div>
+
+      <!-- Edit token tools management -->
+      <div id="my-tools-section" class="my-tools-section">
+        <div class="section-header studio-section-gap">
+          <h2>我的工具（以密鑰管理）</h2>
+        </div>
+        <p class="hint-text">提交工具時會獲得一組編輯密鑰，輸入密鑰即可編輯或刪除對應工具。</p>
+        <div class="token-lookup">
+          <input type="text" id="edit-token-input" placeholder="貼上你的編輯密鑰..." maxlength="64">
+          <input type="number" id="edit-tool-id-input" placeholder="工具 ID" min="1" class="token-id-input">
+          <button id="token-lookup-btn" class="submit-btn">載入</button>
+        </div>
+        <div id="edit-tool-panel" class="edit-tool-panel hidden"></div>
+      </div>
+
+      <!-- Featured eligibility info -->
+      <div class="eligibility-info">
+        <div class="section-header studio-section-gap">
+          <h2>精選推薦資格</h2>
+        </div>
+        <div class="eligibility-card">
+          <p>符合以下條件的創作者，其工具可獲得首頁精選推薦：</p>
+          <ul>
+            <li>至少有一個工具通過審核且狀態為「上架中」</li>
+            <li>無任何未解決的違規紀錄（0 Strikes）</li>
+            <li>至少有一個工具獲得 2 則以上評分，且平均 3 星以上</li>
+            <li>工具連結為 HTTPS 且可正常存取</li>
+          </ul>
+          <p class="hint-text">符合條件後，管理員將在審核週期中優先考慮標記為精選。</p>
+        </div>
+      </div>
     </div>
   </main>
 </div>
@@ -188,6 +233,10 @@
         <button id="modal-close" class="modal-close">✕</button>
       </div>
     </div>
+    <div class="iframe-warning">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      此預覽載入外部網站內容，Vibe App Store 不對第三方網站負責。
+    </div>
     <div class="modal-body">
       <div id="modal-fallback" class="modal-fallback hidden">
         <span>🚫</span>
@@ -199,10 +248,96 @@
   </div>
 </div>
 
+<!-- ── Report modal ────────────────────────────────────── -->
+<div id="report-modal" class="modal hidden">
+  <div class="report-modal-backdrop"></div>
+  <div class="report-modal-box">
+    <div class="report-modal-header">
+      <h3>檢舉內容</h3>
+      <button class="modal-close" id="report-modal-close">✕</button>
+    </div>
+    <form id="report-form">
+      <input type="hidden" id="report-target-type">
+      <input type="hidden" id="report-target-id">
+      <div class="field">
+        <label>檢舉原因 <span class="required">*</span></label>
+        <select id="report-reason" required>
+          <option value="">請選擇...</option>
+          <option value="spam">垃圾內容 / 廣告</option>
+          <option value="malware">惡意軟體 / 釣魚連結</option>
+          <option value="impersonation">冒充他人</option>
+          <option value="inappropriate">不當內容</option>
+          <option value="broken_link">連結失效</option>
+          <option value="other">其他</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="report-detail">補充說明</label>
+        <textarea id="report-detail" placeholder="可選，提供更多細節..." maxlength="500" rows="3"></textarea>
+      </div>
+      <button type="submit" class="submit-btn">送出檢舉</button>
+    </form>
+  </div>
+</div>
+
+<!-- ── Guidelines modal ────────────────────────────────── -->
+<div id="guidelines-modal" class="modal hidden">
+  <div class="guidelines-backdrop"></div>
+  <div class="guidelines-box">
+    <div class="guidelines-header">
+      <h2>社群準則</h2>
+      <button class="modal-close" id="guidelines-close">✕</button>
+    </div>
+    <div class="guidelines-body">
+      <section>
+        <h3>歡迎來到 Vibe App Store</h3>
+        <p>我們致力於打造一個安全、有價值的 AI 工具社群。所有使用者與創作者都需要遵守以下準則。</p>
+      </section>
+      <section>
+        <h3>禁止的內容</h3>
+        <ul>
+          <li><strong>惡意軟體與釣魚</strong> — 不得提交含有病毒、木馬或意圖竊取使用者資料的工具連結。</li>
+          <li><strong>冒充</strong> — 不得假冒他人身分提交工具或留言。</li>
+          <li><strong>仇恨與違法內容</strong> — 不得提交含有仇恨言論、歧視、暴力或其他違法內容的工具。</li>
+          <li><strong>垃圾內容</strong> — 不得重複提交相同工具、發送廣告性質的留言。</li>
+          <li><strong>成人內容</strong> — 不得提交含有色情或不適合所有年齡觀看的內容。</li>
+        </ul>
+      </section>
+      <section>
+        <h3>審核機制</h3>
+        <p>所有新提交的工具將進入審核佇列，經管理員確認後才會公開上架。審核重點包括：連結是否可用、內容是否符合準則、描述是否正確。</p>
+      </section>
+      <section>
+        <h3>檢舉與處置</h3>
+        <p>任何人都可以檢舉違規的工具或留言。我們收到檢舉後會儘快審核，違規內容將被下架。</p>
+        <p>同一創作者累積 <strong>3 次違規（Strikes）</strong>，其所有工具將被自動下架，且暫停新投稿資格。</p>
+      </section>
+      <section>
+        <h3>外部連結免責聲明</h3>
+        <p>Vibe App Store 收錄的工具均為第三方網站。我們會盡力篩選，但無法保證每個工具的安全性、可用性或隱私政策。使用任何工具前請自行評估風險。</p>
+        <p>預覽功能透過 iframe 嵌入外部網站，該網站可能會記錄您的造訪。您可以選擇「在新分頁開啟」來代替預覽。</p>
+      </section>
+      <section>
+        <h3>點數說明</h3>
+        <p>本站的「體驗點數」為 <strong>虛擬點數</strong>，僅作為遊戲化體驗用途，<strong>不可兌換現金、不可轉移</strong>，且儲存在您的瀏覽器中。創作者儀表板中的「收益」數字反映的是工具受歡迎程度的指標，而非實際收入。</p>
+      </section>
+    </div>
+  </div>
+</div>
+
 <!-- ── Scroll to top ───────────────────────────────────── -->
 <button id="scroll-top" class="scroll-top hidden" aria-label="回到頂部">↑</button>
 
-<footer>用 AI 協作打造 · 開放原始碼 · 不需要帳號</footer>
+<footer>
+  <div class="footer-inner">
+    <span>用 AI 協作打造 · 開放原始碼 · 不需要帳號</span>
+    <div class="footer-links">
+      <a href="#" id="guidelines-link">社群準則</a>
+      <span class="footer-sep">·</span>
+      <a href="#" id="privacy-link">隱私與條款</a>
+    </div>
+  </div>
+</footer>
 
 <script src="/app.js"></script>
 </body>

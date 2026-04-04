@@ -27,7 +27,7 @@ npm start     → node server/index.js
 
 ```
 server/
-├── index.js          Express 入口；helmet、trust proxy(prod)、POST 限流、掛載路由
+├── index.js          Express 入口；helmet、trust proxy(prod)、GET/POST /api 限流、`GET /api/health`、掛載路由
 ├── db.js             SQLite 初始化（sqlite + sqlite3 套件，async API）
 ├── util/
 │   └── httpError.js  sendServerError(res, err) — 生產環境不洩漏 e.message

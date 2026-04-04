@@ -1,9 +1,10 @@
-services:
+﻿services:
   - type: web
     name: vibe-app-store
     env: node
     buildCommand: npm install
     startCommand: node server/index.js
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production

@@ -51,7 +51,7 @@ const apiGetLimiter = rateLimit({
 });
 
 app.use('/api', (req, res, next) => {
-  if (req.method === 'POST') return apiPostLimiter(req, res, next);
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return apiPostLimiter(req, res, next);
   if (req.method === 'GET') return apiGetLimiter(req, res, next);
   next();
 });
@@ -60,6 +60,8 @@ app.use('/api/tools',            require('./routes/tools'));
 app.use('/api/ratings/:toolId',  require('./routes/ratings'));
 app.use('/api/comments/:toolId', require('./routes/comments'));
 app.use('/api/creators',         require('./routes/creators'));
+app.use('/api/reports',          require('./routes/reports'));
+app.use('/api/admin',            require('./routes/admin'));
 
 app.get('*', (_req, res) =>
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'))

@@ -1,7 +1,8 @@
-const { open } = require('sqlite');
-const sqlite3  = require('sqlite3');
-const path     = require('path');
-const fs       = require('fs');
+const { open }  = require('sqlite');
+const sqlite3   = require('sqlite3');
+const path      = require('path');
+const fs        = require('fs');
+const crypto    = require('crypto');
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'appstore.db');
 const dir = path.dirname(DB_PATH);
@@ -43,9 +44,28 @@ async function getDb() {
       tool_id    INTEGER NOT NULL REFERENCES tools(id) ON DELETE CASCADE,
       created_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
+    CREATE TABLE IF NOT EXISTS reports (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      target_type TEXT    NOT NULL CHECK(target_type IN ('tool','comment')),
+      target_id   INTEGER NOT NULL,
+      reason      TEXT    NOT NULL,
+      detail      TEXT    NOT NULL DEFAULT '',
+      status      TEXT    NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','resolved','dismissed')),
+      created_at  INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE TABLE IF NOT EXISTS violations (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      creator_name TEXT    NOT NULL,
+      tool_id      INTEGER REFERENCES tools(id) ON DELETE SET NULL,
+      report_id    INTEGER REFERENCES reports(id),
+      reason       TEXT    NOT NULL,
+      created_at   INTEGER NOT NULL DEFAULT (unixepoch())
+    );
   `);
 
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_usage_log_tool_time ON usage_log(tool_id, created_at);`);
+  await db.exec(`CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);`);
+  await db.exec(`CREATE INDEX IF NOT EXISTS idx_violations_creator ON violations(creator_name);`);
 
   // Idempotent column additions for v2
   const cols = await db.all(`PRAGMA table_info(tools)`);
@@ -61,11 +81,17 @@ async function getDb() {
     await db.exec(`ALTER TABLE tools ADD COLUMN points_earned INTEGER NOT NULL DEFAULT 0`);
   if (!has('is_featured'))
     await db.exec(`ALTER TABLE tools ADD COLUMN is_featured INTEGER NOT NULL DEFAULT 0`);
+  if (!has('status'))
+    await db.exec(`ALTER TABLE tools ADD COLUMN status TEXT NOT NULL DEFAULT 'active'`);
+  if (!has('edit_token_hash'))
+    await db.exec(`ALTER TABLE tools ADD COLUMN edit_token_hash TEXT`);
+  if (!has('reviewed_at'))
+    await db.exec(`ALTER TABLE tools ADD COLUMN reviewed_at INTEGER`);
 
   // Seed initial tools if empty
   const { n } = await db.get('SELECT COUNT(*) as n FROM tools');
   if (n === 0) {
-    const ins = `INSERT INTO tools (title, desc, url, tags, lang, creator_name, cost, is_featured) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+    const ins = `INSERT INTO tools (title, desc, url, tags, lang, creator_name, cost, is_featured, status, reviewed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', unixepoch())`;
     await db.run(ins, '履歷健診 AI',      '貼上你的履歷，立即獲得犀利的 AI 改善建議，讓你的履歷脫穎而出。',   'https://resume-roaster.vercel.app', JSON.stringify(['求職','ai']),     '中文', 'Alice',     10, 1);
     await db.run(ins, 'Commit 訊息產生器', '從你的 git diff 自動產生完美的 commit 訊息，告別寫 "fix bug"。',   'https://commitai.dev',              JSON.stringify(['開發','生產力']), '多語言', 'Bob',       0,  0);
     await db.run(ins, '開發提案信撰寫器',  '用 AI 寫出真的會被回覆的開發合作提案信，轉換率大幅提升。',          'https://coldemailcrafter.com',      JSON.stringify(['業務','寫作']),   '中文', 'Alice',     15, 1);
@@ -76,4 +102,14 @@ async function getDb() {
   return db;
 }
 
-module.exports = { getDb };
+function generateEditToken() {
+  const token = crypto.randomBytes(32).toString('hex');
+  const hash  = crypto.createHash('sha256').update(token).digest('hex');
+  return { token, hash };
+}
+
+function hashToken(token) {
+  return crypto.createHash('sha256').update(String(token)).digest('hex');
+}
+
+module.exports = { getDb, generateEditToken, hashToken };
