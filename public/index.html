@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Vibe App Store — 探索與分享由 AI 協作打造的工具，亞洲最大的 AI 工具社群目錄。">
+  <title>Vibe App Store — AI 工具目錄</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">⚡ vibe<span>.store</span></div>
+    <div class="header-meta" id="header-count"></div>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-label">// 開放目錄</div>
+  <h1>探索與分享<br><em>AI 打造的工具</em></h1>
+  <p>一個社群目錄，收錄由 AI 協作打造的工具。瀏覽大家的作品、試用看看，或提交你自己做的工具。</p>
+  <div class="search-wrap">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input type="text" id="search" placeholder="搜尋工具..." autocomplete="off">
+  </div>
+</div>
+
+<main>
+  <!-- Controls -->
+  <div class="controls">
+    <div class="tag-filters" id="tag-filters">
+      <button class="tag-btn active" data-tag="">全部</button>
+    </div>
+    <div class="sort-btns">
+      <button class="sort-btn active" data-sort="newest">最新</button>
+      <button class="sort-btn" data-sort="top">評分最高</button>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <h2>所有工具</h2>
+    <span id="tool-count">0</span>
+  </div>
+
+  <div id="tool-grid"></div>
+
+  <hr class="divider">
+
+  <!-- Submit form -->
+  <section class="submit-section">
+    <h2>提交工具</h2>
+    <p>用 AI 做了什麼有趣的東西？分享給大家吧。</p>
+    <div id="flash" class="flash hidden">✓ 已新增！</div>
+    <form id="submit-form">
+      <div class="field">
+        <label for="f-title">名稱</label>
+        <input type="text" id="f-title" placeholder="例如：履歷健診 AI" required maxlength="80">
+      </div>
+      <div class="field">
+        <label for="f-desc">描述</label>
+        <textarea id="f-desc" placeholder="這個工具能做什麼？用一兩句話說清楚。" required maxlength="300"></textarea>
+      </div>
+      <div class="field">
+        <label for="f-url">網址</label>
+        <input type="url" id="f-url" placeholder="https://your-tool.vercel.app" required>
+      </div>
+      <div class="field">
+        <label for="f-tags">標籤 <span class="hint">（逗號分隔，最多 5 個）</span></label>
+        <input type="text" id="f-tags" placeholder="ai, 生產力, 開發工具">
+      </div>
+      <div class="field">
+        <label for="f-lang">語言支援</label>
+        <select id="f-lang">
+          <option value="中文">中文</option>
+          <option value="英文">英文</option>
+          <option value="多語言">多語言</option>
+          <option value="日文">日文</option>
+          <option value="韓文">韓文</option>
+        </select>
+      </div>
+      <button type="submit" class="submit-btn">+ 新增工具</button>
+    </form>
+  </section>
+</main>
+
+<!-- Preview modal -->
+<div id="preview-modal" class="modal hidden">
+  <div class="modal-backdrop" id="modal-backdrop"></div>
+  <div class="modal-box">
+    <div class="modal-header">
+      <span id="modal-title" class="modal-title"></span>
+      <div class="modal-actions">
+        <a id="modal-open-link" href="#" target="_blank" rel="noopener noreferrer" class="modal-link-btn">在新分頁開啟 ↗</a>
+        <button id="modal-close" class="modal-close">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div id="modal-fallback" class="modal-fallback hidden">
+        <span>🚫</span>
+        <p>此網站不允許嵌入預覽</p>
+        <a id="fallback-link" href="#" target="_blank" rel="noopener noreferrer" class="try-btn">直接開啟 →</a>
+      </div>
+      <iframe id="preview-iframe" src="" title="工具預覽" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+    </div>
+  </div>
+</div>
+
+<footer>用 AI 協作打造 · 開放原始碼 · 不需要帳號</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>

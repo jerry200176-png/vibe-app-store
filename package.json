@@ -1,0 +1,15 @@
+{
+  "name": "vibe-app-store",
+  "version": "1.0.0",
+  "description": "AI 工具社群目錄 — 探索、試用、分享 AI 打造的工具",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
+  }
+}

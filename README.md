@@ -1,85 +1,133 @@
-# ⚡ Vibe App Store
+# Vibe App Store
 
-> 探索與分享由 AI 協作打造的工具 — 亞洲社群的 AI 工具目錄
+探索、評分與討論由 **AI 協助開發** 的小工具——開放目錄，無需註冊即可瀏覽與提交。
 
-**線上網址：** https://jerry200176-png.github.io/vibe-app-store/
+**線上預覽（GitHub Pages）：** [jerry200176-png.github.io/vibe-app-store](https://jerry200176-png.github.io/vibe-app-store/)
 
----
-
-## 這是什麼？
-
-Vibe App Store 是一個開放的社群目錄，專門收錄「vibe coding」時代下，用 AI 協作打造的各種小工具。
-
-任何人都可以：
-- 瀏覽現有的 AI 工具
-- 用關鍵字搜尋工具
-- 替喜歡的工具投票
-- 提交自己做的工具
-
-不需要帳號，不需要安裝任何東西。
+> GitHub Pages 僅能託管靜態檔案。若要使用完整功能（SQLite 持久化、REST API、評分與留言），請在本地或自有主機執行下方「本地開發」步驟。
 
 ---
 
-## 功能
+## 專案簡介
 
-- **工具列表** — 卡片式呈現，顯示名稱、描述、標籤、語言支援
-- **即時搜尋** — 依標題、描述、標籤即時篩選
-- **投票** — 替喜歡的工具按讚
-- **提交工具** — 填寫名稱、描述、網址、標籤、語言即可送出
-- **語言標籤** — 標示工具支援中文 / 英文 / 多語言 / 日文 / 韓文
+Vibe App Store 是社群向的 **AI 工具目錄**：卡片列表、搜尋與篩選、提交新工具，並可對工具給予星等評分與留言。介面以中文為主，適合亞洲使用者快速發現可試用的工具。
 
 ---
 
-## 技術架構
+## 功能一覽
 
-| 項目 | 說明 |
+| 功能 | 說明 |
 |------|------|
-| 前端 | 純 HTML + CSS + JavaScript（無框架） |
-| 資料儲存 | 瀏覽器記憶體（頁面重整後重置） |
-| 部署 | GitHub Pages（免費靜態託管） |
-| 相依套件 | 無 |
-
-> 整個應用只有一個檔案：`index.html`
+| 工具列表 | 名稱、描述、標籤、語系、建立時間；支援依標籤篩選、依「最新／評分最高」排序 |
+| 搜尋 | 前端即時篩選標題、描述、標籤 |
+| 評分 | `POST /api/ratings/:toolId`，1～5 星（可多次提交，後端計算平均） |
+| 留言 | `GET`／`POST /api/comments/:toolId` |
+| 提交工具 | `POST /api/tools`，驗證必填欄位與 `http`／`https` 網址 |
+| 內嵌預覽 | 前端 modal 以 iframe 預覽工具網址（受目標站 CSP 限制時會 fallback） |
 
 ---
 
-## 本地執行
+## 技術棧
+
+| 層級 | 技術 |
+|------|------|
+| 後端 | [Node.js](https://nodejs.org/) + [Express](https://expressjs.com/) |
+| 資料庫 | [SQLite](https://www.sqlite.org/)（[better-sqlite3](https://github.com/WiseLibs/better-sqlite3)） |
+| 前端 | `public/` 內靜態 HTML、CSS、`app.js`（由 Express 提供） |
+| 部署（完整版） | 需可執行 Node 的環境；資料檔預設為 `data/appstore.db` |
+
+---
+
+## 目錄結構
+
+```
+vibe-app-store/
+├── server/           # Express 入口與 API
+│   ├── index.js
+│   ├── db.js         # SQLite 連線、schema、初次種子資料
+│   └── routes/       # tools / ratings / comments
+├── public/           # 前端（index.html、style.css、app.js）
+├── data/             # 執行時建立，存放 *.db（已列入 .gitignore）
+├── index.html        # 可選：舊版單檔或 GitHub Pages 用，與 public 分岔時請自行對齊
+├── package.json
+└── README.md
+```
+
+---
+
+## 需求
+
+- **Node.js** 18+（建議 LTS）
+- 具 **npm** 或相容的套件管理器
+
+Windows 安裝 `better-sqlite3` 時需有建置環境（常見為「Visual Studio Build Tools」）；若安裝失敗，請依 [better-sqlite3 說明](https://github.com/WiseLibs/better-sqlite3) 補齊工具鏈。
+
+---
+
+## 本地開發
 
 ```bash
 git clone https://github.com/jerry200176-png/vibe-app-store.git
 cd vibe-app-store
-# 直接用瀏覽器開啟 index.html 即可
-open index.html
+npm install
+npm run dev
 ```
+
+瀏覽器開啟 **http://localhost:3000**（埠號可透過環境變數覆寫，見下節）。
+
+- `npm start`：正式模式（無 watch）
+- `npm run dev`：使用 `node --watch` 於檔案變更時重啟伺服器
 
 ---
 
-## 部署更新
+## 環境變數
+
+| 變數 | 預設 | 說明 |
+|------|------|------|
+| `PORT` | `3000` | HTTP 監聽埠 |
+| `DB_PATH` | `data/appstore.db`（相對於專案根目錄） | SQLite 檔案路徑 |
+
+---
+
+## API 摘要
+
+基底路徑：`/api`
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| `GET` | `/tools?sort=newest\|top&tag=` | 列表；`tag` 可選 |
+| `POST` | `/tools` | 新增工具；JSON：`title`, `desc`, `url`, `tags`, `lang` |
+| `POST` | `/ratings/:toolId` | JSON：`stars`（1–5） |
+| `GET` | `/comments/:toolId` | 留言列表 |
+| `POST` | `/comments/:toolId` | JSON：`body`（最多 500 字） |
+
+詳細行為以 `server/routes/*.js` 為準。
+
+---
+
+## 部署與同步 GitHub
 
 ```bash
-git add .
-git commit -m "update"
-git push
+git add -A
+git commit -m "描述這次變更"
+git push origin master
 ```
 
-推上去後約 1 分鐘，GitHub Pages 自動更新。
+- **僅靜態頁**：可繼續用 [GitHub Pages](https://pages.github.com/) 發布根目錄或 `docs/`／指定分支，但 **不會** 帶上 Node API 與資料庫。
+- **完整網站**：請部署到支援 Node 的平台（例如雲端 VM、Railway、Render、Fly.io 等），設定 `PORT`／`DB_PATH` 並持久化 `data` 目錄（若需要）。
 
 ---
 
-## 為何做這個？
+## 貢獻與規範
 
-GitHub 是工程師分享程式碼的地方，但 AI 工具時代需要一個更友善的平台：
-
-- **零技術門檻** — 不需要懂 git 或程式碼
-- **中文優先** — 專為亞洲用戶設計
-- **一鍵試用** — 直接連到工具，不用安裝
+請閱讀 [CONTRIBUTING.md](CONTRIBUTING.md)。安全性問題請依 [SECURITY.md](SECURITY.md) 私下回報，勿公開 Issue。
 
 ---
 
-## 貢獻
+## 授權
 
-歡迎 PR 與 Issue！這是一個開放原始碼的社群專案。
+[MIT License](LICENSE)
 
 ---
 
-*用 AI 協作打造 · 不需要帳號*
+*用 AI 協作打造 · 開放原始碼*
