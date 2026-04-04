@@ -40,14 +40,19 @@ Vibe App Store 是一個**社群驅動的 AI 工具目錄**，專為亞洲用戶
 
 | 功能 | 說明 |
 |------|------|
-| 🔍 瀏覽與搜尋 | 即時搜尋工具名稱、描述、標籤 |
+| 🔍 瀏覽與搜尋 | 即時搜尋工具名稱、描述、標籤、創作者 |
 | 🏷 標籤篩選 | 點擊標籤 chip 篩選，支援多種分類 |
-| 📊 排序 | 依「最新」或「評分最高」排序 |
+| 👤 創作者篩選 | 下拉選單依創作者過濾工具列表 |
+| 📊 排序 | 依「最新」、「評分最高」或「熱門」排序 |
 | ⭐ 評分 | 1–5 星評分，顯示平均分與評分人數 |
 | 💬 留言 | 每個工具獨立留言區，即時顯示 |
 | 🖼 預覽 | iframe 嵌入預覽，不支援時顯示直接開啟按鈕 |
-| ➕ 提交工具 | 填寫名稱、描述、網址、標籤、語言即可送出 |
+| ➕ 提交工具 | 填寫名稱、描述、網址、創作者、費用、標籤、語言即可送出 |
 | 🌐 語言標籤 | 標示工具支援語言（中文 / 英文 / 多語言 / 日文 / 韓文） |
+| 💰 點數系統 | 使用者初始 100 點（localStorage），付費工具需扣點才能使用 |
+| ⭐ 精選推薦 | 首頁頂部顯示精選工具（is_featured 欄位） |
+| 📈 創作者收益 | 查詢創作者工具使用次數與累積收益點數 |
+| 🔥 熱門排序 | 根據近 7 天使用量與評分綜合排名 |
 
 ---
 
@@ -70,15 +75,16 @@ Vibe App Store 是一個**社群驅動的 AI 工具目錄**，專為亞洲用戶
 vibe-app-store/
 ├── server/
 │   ├── index.js          # Express 入口、路由掛載、靜態檔服務
-│   ├── db.js             # SQLite 連線、schema 初始化、種子資料
+│   ├── db.js             # SQLite 連線、schema + migration、種子資料
 │   └── routes/
-│       ├── tools.js      # GET/POST /api/tools
+│       ├── tools.js      # GET/POST /api/tools, POST /api/tools/:id/use
 │       ├── ratings.js    # POST /api/ratings/:toolId
-│       └── comments.js   # GET/POST /api/comments/:toolId
+│       ├── comments.js   # GET/POST /api/comments/:toolId
+│       └── creators.js   # GET /api/creators/stats
 ├── public/
 │   ├── index.html        # 前端殼層（引用下方兩個檔案）
 │   ├── style.css         # 所有樣式（深色主題、響應式）
-│   └── app.js            # 所有前端邏輯（fetch API、互動）
+│   └── app.js            # 所有前端邏輯（fetch API、互動、點數系統）
 ├── data/                 # 執行時自動建立，存放 appstore.db（已 gitignore）
 ├── index.html            # GitHub Pages 用的靜態版本（不含後端功能）
 ├── package.json
@@ -146,8 +152,9 @@ npm start      # 正式模式（無 watch）
 
 | 參數 | 可選值 | 預設 | 說明 |
 |------|--------|------|------|
-| `sort` | `newest` \| `top` | `newest` | 排序方式 |
+| `sort` | `newest` \| `top` \| `trending` | `newest` | 排序方式 |
 | `tag` | 任意字串 | — | 依標籤篩選 |
+| `creator` | 任意字串 | — | 依創作者名稱篩選（不分大小寫） |
 
 **回應範例：**
 
@@ -160,6 +167,11 @@ npm start      # 正式模式（無 watch）
     "url": "https://example.com",
     "tags": ["求職", "ai"],
     "lang": "中文",
+    "creator_name": "Alice",
+    "cost": 10,
+    "usage_count": 42,
+    "points_earned": 420,
+    "is_featured": true,
     "created_at": 1712345678,
     "avg_rating": 4.5,
     "rating_count": 12,
@@ -179,12 +191,28 @@ npm start      # 正式模式（無 watch）
   "title": "工具名稱",
   "desc": "工具描述",
   "url": "https://your-tool.example.com",
+  "creator_name": "你的名字",
+  "cost": 10,
   "tags": ["ai", "生產力"],
   "lang": "中文"
 }
 ```
 
-驗證規則：`title`、`desc`、`url` 為必填；`url` 必須是 `http://` 或 `https://` 開頭；`tags` 最多 5 個，每個最多 50 字元；`desc` 最多 300 字元。
+驗證規則：`title`、`desc`、`url`、`creator_name` 為必填；`url` 必須是 `http://` 或 `https://` 開頭；`cost` 為 0–100 整數（0 = 免費）；`tags` 最多 5 個；`desc` 最多 300 字元。不接受 `is_featured`（僅能由後端設定）。
+
+#### `POST /api/tools/:id/use`
+
+記錄一次工具使用事件。若工具有費用，同時累加 `usage_count` 與 `points_earned`。
+
+**回應：** `{ "usage_count": 43, "points_earned": 430, "cost": 10 }`
+
+---
+
+### 創作者
+
+#### `GET /api/creators/stats?name=Alice`
+
+查詢指定創作者的工具列表及總收益。回傳 `creator_name`、`tools`（含各工具 `usage_count`、`points_earned`）、`total_uses`、`total_points_earned`。
 
 ---
 

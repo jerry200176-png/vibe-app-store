@@ -11,6 +11,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api/tools',            require('./routes/tools'));
 app.use('/api/ratings/:toolId',  require('./routes/ratings'));
 app.use('/api/comments/:toolId', require('./routes/comments'));
+app.use('/api/creators',         require('./routes/creators'));
 
 app.get('*', (_req, res) =>
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'))

@@ -44,10 +44,16 @@ server/
 - Schema：
 
 ```sql
-tools    (id, title, desc, url, tags TEXT/JSON, lang, created_at)
-ratings  (id, tool_id → tools.id, stars 1-5, created_at)
-comments (id, tool_id → tools.id, body, created_at)
+tools     (id, title, desc, url, tags TEXT/JSON, lang, creator_name, cost, usage_count, points_earned, is_featured, created_at)
+ratings   (id, tool_id → tools.id, stars 1-5, created_at)
+comments  (id, tool_id → tools.id, body, created_at)
+usage_log (id, tool_id → tools.id, created_at)
 ```
+
+- `cost`: 0 = 免費, 1–100 = 付費（虛擬點數）
+- `usage_count` / `points_earned`: 由 `POST /api/tools/:id/use` 遞增
+- `is_featured`: 0/1, 由後端 seed 或 SQL 設定（API 不接受前端寫入）
+- `usage_log`: 每次使用一筆記錄，用於 trending 排序（近 7 日使用量）
 
 - `tags` 欄位儲存為 JSON 字串（`'["ai","生產力"]'`），讀出後需 `JSON.parse()`
 - `created_at` 為 Unix timestamp（`unixepoch()` 格式）
@@ -66,9 +72,10 @@ public/
 
 ### 前端關鍵慣例
 
-- **狀態**：`allTools` 陣列 + `activeTag`、`activeSort`、`searchQuery` 變數
+- **狀態**：`allTools` 陣列 + `activeTag`、`activeSort`、`activeCreator`、`searchQuery` 變數
+- **點數**：`localStorage` 的 `vibe_points`（預設 100），由 `getPoints()` / `setPoints()` 管理
 - **渲染**：`renderAll()` 每次過濾/排序後重新渲染整個 grid
-- **事件**：所有 grid 內的互動透過事件委派掛在 `#tool-grid` 上
+- **事件**：所有 grid 內的互動透過事件委派掛在 `#tool-grid` 與 `#featured-grid` 上
 - **XSS 防護**：所有動態插入的字串必須通過 `esc()` 函式處理
 - **評分防重複**：透過 `localStorage` 的 `rated_tools`（物件）與 `my_stars`（物件）
 - **API 呼叫**：統一透過 `apiFetch(path, opts)` 包裝函式
@@ -79,11 +86,13 @@ public/
 
 | 方法 | 路徑 | 說明 |
 |------|------|------|
-| GET | `/api/tools?sort=newest\|top&tag=xxx` | 列表，含聚合欄位 |
-| POST | `/api/tools` | 新增工具 |
+| GET | `/api/tools?sort=newest\|top\|trending&tag=&creator=` | 列表，含聚合欄位與 v2 欄位 |
+| POST | `/api/tools` | 新增工具（含 `creator_name`, `cost`） |
+| POST | `/api/tools/:id/use` | 記錄使用事件，更新 usage_count / points_earned |
 | POST | `/api/ratings/:toolId` | 評分 `{ stars: 1-5 }` |
 | GET | `/api/comments/:toolId` | 留言列表 |
 | POST | `/api/comments/:toolId` | 新增留言 `{ body }` |
+| GET | `/api/creators/stats?name=` | 創作者收益統計 |
 
 所有 API 回應為 JSON；錯誤回應格式 `{ "error": "說明" }`。
 

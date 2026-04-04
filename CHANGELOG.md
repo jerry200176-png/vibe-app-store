@@ -6,7 +6,16 @@
 
 ## [Unreleased]
 
-> 在此記錄尚未發布的功能或修正。
+### 新增
+
+- **點數系統**：使用者初始 100 點（localStorage），付費工具需扣點；餘額顯示於 header
+- **創作者歸屬**：每個工具關聯 `creator_name`，卡片上顯示 "by XXX"，支援依創作者篩選
+- **創作者收益查詢**：`GET /api/creators/stats?name=`，前端查詢面板顯示使用量與累積收益
+- **精選推薦**：首頁頂部 Featured 區塊，透過 `is_featured` 欄位標記（僅限後端設定）
+- **熱門排序**：`sort=trending`，基於近 7 天使用量 + 評分加權
+- **使用記錄 API**：`POST /api/tools/:id/use`，記錄 `usage_log` 並遞增 `usage_count` / `points_earned`
+- **DB migration**：idempotent `ALTER TABLE` 為 `tools` 表新增 `creator_name`, `cost`, `usage_count`, `points_earned`, `is_featured` 欄位；新增 `usage_log` 表
+- **UI**：費用 chip、使用次數、付費按鈕（金色）與免費按鈕（綠色）、header 點數 pill
 
 ---
 

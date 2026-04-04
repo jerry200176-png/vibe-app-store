@@ -12,7 +12,10 @@
 <header>
   <div class="header-inner">
     <div class="logo">⚡ vibe<span>.store</span></div>
-    <div class="header-meta" id="header-count"></div>
+    <div class="header-right">
+      <div class="points-pill" id="points-display" title="你的點數餘額"></div>
+      <div class="header-meta" id="header-count"></div>
+    </div>
   </div>
 </header>
 
@@ -29,14 +32,30 @@
 </div>
 
 <main>
+  <!-- Featured -->
+  <section id="featured-section" class="featured-section hidden">
+    <div class="section-header">
+      <h2>精選推薦</h2>
+    </div>
+    <div id="featured-grid" class="featured-grid"></div>
+  </section>
+
   <!-- Controls -->
   <div class="controls">
-    <div class="tag-filters" id="tag-filters">
-      <button class="tag-btn active" data-tag="">全部</button>
+    <div class="controls-left">
+      <div class="tag-filters" id="tag-filters">
+        <button class="tag-btn active" data-tag="">全部</button>
+      </div>
+      <div class="creator-filter">
+        <select id="creator-select">
+          <option value="">所有創作者</option>
+        </select>
+      </div>
     </div>
     <div class="sort-btns">
       <button class="sort-btn active" data-sort="newest">最新</button>
       <button class="sort-btn" data-sort="top">評分最高</button>
+      <button class="sort-btn" data-sort="trending">熱門</button>
     </div>
   </div>
 
@@ -68,21 +87,44 @@
         <input type="url" id="f-url" placeholder="https://your-tool.vercel.app" required>
       </div>
       <div class="field">
+        <label for="f-creator">創作者名稱</label>
+        <input type="text" id="f-creator" placeholder="你的名字或暱稱" required maxlength="40">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="f-cost">費用（點數） <span class="hint">0 = 免費</span></label>
+          <input type="number" id="f-cost" value="0" min="0" max="100">
+        </div>
+        <div class="field">
+          <label for="f-lang">語言支援</label>
+          <select id="f-lang">
+            <option value="中文">中文</option>
+            <option value="英文">英文</option>
+            <option value="多語言">多語言</option>
+            <option value="日文">日文</option>
+            <option value="韓文">韓文</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
         <label for="f-tags">標籤 <span class="hint">（逗號分隔，最多 5 個）</span></label>
         <input type="text" id="f-tags" placeholder="ai, 生產力, 開發工具">
       </div>
-      <div class="field">
-        <label for="f-lang">語言支援</label>
-        <select id="f-lang">
-          <option value="中文">中文</option>
-          <option value="英文">英文</option>
-          <option value="多語言">多語言</option>
-          <option value="日文">日文</option>
-          <option value="韓文">韓文</option>
-        </select>
-      </div>
       <button type="submit" class="submit-btn">+ 新增工具</button>
     </form>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Creator stats -->
+  <section class="creator-section">
+    <h2>創作者收益查詢</h2>
+    <p>輸入創作者名稱，查看工具使用量與累積收益。</p>
+    <div class="creator-lookup">
+      <input type="text" id="creator-name-input" placeholder="輸入創作者名稱..." maxlength="40">
+      <button id="creator-lookup-btn" class="submit-btn">查詢</button>
+    </div>
+    <div id="creator-stats" class="creator-stats hidden"></div>
   </section>
 </main>
 
