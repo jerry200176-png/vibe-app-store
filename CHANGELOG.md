@@ -17,6 +17,17 @@
 - **DB migration**：idempotent `ALTER TABLE` 為 `tools` 表新增 `creator_name`, `cost`, `usage_count`, `points_earned`, `is_featured` 欄位；新增 `usage_log` 表
 - **UI**：費用 chip、使用次數、付費按鈕（金色）與免費按鈕（綠色）、header 點數 pill
 
+### 改善
+
+- **熱門排序 SQL**：將重複的 correlated subquery 改為單次聚合 `LEFT JOIN`，降低 `usage_log` 掃描量
+- **`/use` 交易安全**：`POST /api/tools/:id/use` 的 `INSERT usage_log` + `UPDATE tools` 包進 `BEGIN IMMEDIATE` / `COMMIT` / `ROLLBACK`
+- **`usage_log` 索引**：新增 `idx_usage_log_tool_time(tool_id, created_at)` 加速熱門排序與統計
+- **雙入口釐清**：根目錄 `index.html` 精簡為 GitHub Pages 佔位頁；README / AGENTS 明確標注 `public/` 為唯一正式 UI
+- **API 限流**：`POST /api/*` 加上 `express-rate-limit`（每 15 分鐘 60 次/IP），防止基本濫用
+- **資安強化**：`helmet` 安全標頭；`production` 下 `trust proxy` 與限流 IP 正確；`sendServerError` 隱藏生產環境 500 細節；`sort` 白名單、`tag` LIKE 逸出、創作者查詢長度上限
+- **`GET /api/health`**：供監控／Render health check，不查 DB、不計入 GET 限流
+- **GET API 限流**：`GET /api/*`（health 除外）每 15 分鐘 400 次／IP
+
 ---
 
 ## [1.0.0] - 2026-04-05

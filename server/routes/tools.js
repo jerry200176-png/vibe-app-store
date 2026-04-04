@@ -1,6 +1,7 @@
 const express   = require('express');
 const router    = express.Router();
 const { getDb } = require('../db');
+const { sendServerError } = require('../util/httpError');
 
 const BASE_AGG = `
   SELECT t.id, t.title, t.desc, t.url, t.tags, t.lang, t.created_at,
@@ -13,6 +14,8 @@ const BASE_AGG = `
   LEFT JOIN comments c ON c.tool_id = t.id
 `;
 
+const SORT_MODES = { newest: true, top: true, trending: true };
+
 function parse(t) {
   t.tags          = JSON.parse(t.tags || '[]');
   t.avg_rating    = t.avg_rating    || 0;
@@ -22,30 +25,51 @@ function parse(t) {
   return t;
 }
 
-// GET /api/tools?sort=newest|top|trending&tag=xxx&creator=xxx
+function escapeLikeFragment(s) {
+  return String(s)
+    .replace(/\\/g, '\\\\')
+    .replace(/%/g, '\\%')
+    .replace(/_/g, '\\_')
+    .replace(/"/g, '');
+}
+
 router.get('/', async (req, res) => {
   try {
     const db = await getDb();
-    const { sort = 'newest', tag, creator } = req.query;
+    const sortRaw = req.query.sort;
+    const sort = SORT_MODES[sortRaw] ? sortRaw : 'newest';
+    const { tag, creator } = req.query;
     const where = [];
     const args  = [];
 
-    if (tag)     { where.push(`t.tags LIKE ?`);              args.push(`%"${tag}"%`); }
-    if (creator) { where.push(`LOWER(t.creator_name) = ?`);  args.push(creator.trim().toLowerCase()); }
+    if (tag && String(tag).trim()) {
+      const frag = escapeLikeFragment(String(tag).trim());
+      if (frag.length) {
+        where.push(`t.tags LIKE ? ESCAPE '\\'`);
+        args.push(`%"${frag}"%`);
+      }
+    }
+    if (creator && String(creator).trim()) {
+      where.push(`LOWER(t.creator_name) = ?`);
+      args.push(String(creator).trim().toLowerCase().slice(0, 100));
+    }
 
     let sql = BASE_AGG;
     if (where.length) sql += ` WHERE ${where.join(' AND ')}`;
     sql += ` GROUP BY t.id`;
 
     if (sort === 'trending') {
-      // Simple score: recent_7d_uses * 3 + avg_rating * ln(1 + rating_count)
-      // We use a correlated subquery for the 7-day usage count.
       sql = `
-        SELECT sub.*,
-          (COALESCE((SELECT COUNT(*) FROM usage_log u WHERE u.tool_id = sub.id AND u.created_at >= unixepoch() - 604800), 0)) as recent_uses
+        SELECT sub.*, COALESCE(recent.cnt, 0) as recent_uses
         FROM (${sql}) sub
+        LEFT JOIN (
+          SELECT tool_id, COUNT(*) as cnt
+          FROM usage_log
+          WHERE created_at >= unixepoch() - 604800
+          GROUP BY tool_id
+        ) recent ON recent.tool_id = sub.id
         ORDER BY
-          (COALESCE((SELECT COUNT(*) FROM usage_log u WHERE u.tool_id = sub.id AND u.created_at >= unixepoch() - 604800), 0)) * 3
+          COALESCE(recent.cnt, 0) * 3
           + COALESCE(sub.avg_rating, 0) * (1 + ln(1 + sub.rating_count))
           DESC
       `;
@@ -57,10 +81,9 @@ router.get('/', async (req, res) => {
 
     const rows = await db.all(sql, args);
     res.json(rows.map(parse));
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { sendServerError(res, e); }
 });
 
-// POST /api/tools/:id/use  — record a usage event
 router.post('/:id/use', async (req, res) => {
   try {
     const db     = await getDb();
@@ -68,20 +91,25 @@ router.post('/:id/use', async (req, res) => {
     const tool   = await db.get('SELECT id, cost FROM tools WHERE id = ?', [toolId]);
     if (!tool) return res.status(404).json({ error: '找不到此工具' });
 
-    await db.run('INSERT INTO usage_log (tool_id) VALUES (?)', [toolId]);
-
-    if (tool.cost > 0) {
-      await db.run('UPDATE tools SET usage_count = usage_count + 1, points_earned = points_earned + cost WHERE id = ?', [toolId]);
-    } else {
-      await db.run('UPDATE tools SET usage_count = usage_count + 1 WHERE id = ?', [toolId]);
+    await db.run('BEGIN IMMEDIATE');
+    try {
+      await db.run('INSERT INTO usage_log (tool_id) VALUES (?)', [toolId]);
+      if (tool.cost > 0) {
+        await db.run('UPDATE tools SET usage_count = usage_count + 1, points_earned = points_earned + cost WHERE id = ?', [toolId]);
+      } else {
+        await db.run('UPDATE tools SET usage_count = usage_count + 1 WHERE id = ?', [toolId]);
+      }
+      await db.run('COMMIT');
+    } catch (txErr) {
+      await db.run('ROLLBACK').catch(() => {});
+      throw txErr;
     }
 
     const updated = await db.get('SELECT usage_count, points_earned, cost FROM tools WHERE id = ?', [toolId]);
     res.status(201).json(updated);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { sendServerError(res, e); }
 });
 
-// POST /api/tools
 router.post('/', async (req, res) => {
   try {
     const db = await getDb();
@@ -105,7 +133,7 @@ router.post('/', async (req, res) => {
     );
     const tool = await db.get(`${BASE_AGG} WHERE t.id = ? GROUP BY t.id`, [lastID]);
     res.status(201).json(parse(tool));
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { sendServerError(res, e); }
 });
 
 module.exports = router;

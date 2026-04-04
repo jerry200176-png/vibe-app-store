@@ -1,8 +1,8 @@
 const express   = require('express');
 const router    = express.Router({ mergeParams: true });
 const { getDb } = require('../db');
+const { sendServerError } = require('../util/httpError');
 
-// GET /api/comments/:toolId
 router.get('/', async (req, res) => {
   try {
     const db = await getDb();
@@ -11,10 +11,9 @@ router.get('/', async (req, res) => {
       [Number(req.params.toolId)]
     );
     res.json(rows);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { sendServerError(res, e); }
 });
 
-// POST /api/comments/:toolId
 router.post('/', async (req, res) => {
   try {
     const db     = await getDb();
@@ -30,7 +29,7 @@ router.post('/', async (req, res) => {
       `SELECT id, body, created_at FROM comments WHERE id = ?`, [lastID]
     );
     res.status(201).json(comment);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { sendServerError(res, e); }
 });
 
 module.exports = router;

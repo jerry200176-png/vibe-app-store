@@ -1,8 +1,8 @@
 const express   = require('express');
 const router    = express.Router();
 const { getDb } = require('../db');
+const { sendServerError } = require('../util/httpError');
 
-// GET /api/creators/stats?name=Alice
 router.get('/stats', async (req, res) => {
   try {
     const name = req.query.name?.trim();
@@ -11,7 +11,7 @@ router.get('/stats', async (req, res) => {
     const db = await getDb();
     const tools = await db.all(
       `SELECT id, title, cost, usage_count, points_earned FROM tools WHERE LOWER(creator_name) = ?`,
-      [name.toLowerCase()]
+      [name.toLowerCase().slice(0, 100)]
     );
 
     if (tools.length === 0) return res.status(404).json({ error: '找不到此創作者的工具' });
@@ -20,7 +20,7 @@ router.get('/stats', async (req, res) => {
     const total_points_earned = tools.reduce((s, t) => s + t.points_earned, 0);
 
     res.json({ creator_name: name, tools, total_uses, total_points_earned });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { sendServerError(res, e); }
 });
 
 module.exports = router;

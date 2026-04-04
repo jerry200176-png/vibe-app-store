@@ -45,6 +45,8 @@ async function getDb() {
     );
   `);
 
+  await db.exec(`CREATE INDEX IF NOT EXISTS idx_usage_log_tool_time ON usage_log(tool_id, created_at);`);
+
   // Idempotent column additions for v2
   const cols = await db.all(`PRAGMA table_info(tools)`);
   const has = name => cols.some(c => c.name === name);

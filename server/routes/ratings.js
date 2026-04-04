@@ -1,8 +1,8 @@
 const express   = require('express');
 const router    = express.Router({ mergeParams: true });
 const { getDb } = require('../db');
+const { sendServerError } = require('../util/httpError');
 
-// POST /api/ratings/:toolId
 router.post('/', async (req, res) => {
   try {
     const db     = await getDb();
@@ -18,7 +18,7 @@ router.post('/', async (req, res) => {
       [toolId]
     );
     res.status(201).json(agg);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { sendServerError(res, e); }
 });
 
 module.exports = router;

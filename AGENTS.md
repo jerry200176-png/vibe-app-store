@@ -27,15 +27,20 @@ npm start     → node server/index.js
 
 ```
 server/
-├── index.js          Express 入口；掛載路由；服務 public/ 靜態檔
+├── index.js          Express 入口；helmet、trust proxy(prod)、POST 限流、掛載路由
 ├── db.js             SQLite 初始化（sqlite + sqlite3 套件，async API）
+├── util/
+│   └── httpError.js  sendServerError(res, err) — 生產環境不洩漏 e.message
 └── routes/
-    ├── tools.js      GET /api/tools, POST /api/tools
+    ├── tools.js      GET /api/tools, POST /api/tools, POST /api/tools/:id/use
     ├── ratings.js    POST /api/ratings/:toolId
-    └── comments.js   GET /api/comments/:toolId, POST /api/comments/:toolId
+    ├── comments.js   GET/POST /api/comments/:toolId
+    └── creators.js   GET /api/creators/stats
 ```
 
 **重要：** 使用的是 `sqlite` + `sqlite3`（async/await API），**不是** `better-sqlite3`（sync API）。修改 DB 相關程式碼時請使用 `await db.all()` / `await db.get()` / `await db.run()` 形式。
+
+**安全：** 新增路由時，`catch` 區塊請呼叫 `sendServerError(res, e)`，勿直接回傳 `e.message`。`GET /api/tools` 的 `sort` 已白名單化；`tag` 篩選使用 `LIKE ... ESCAPE` 與逸出字元。
 
 ### 資料庫
 
@@ -68,7 +73,7 @@ public/
 └── app.js        所有前端邏輯（fetch API、事件委派、localStorage）
 ```
 
-**注意：** 根目錄的 `index.html` 是 GitHub Pages 用的靜態版本（舊版），與 `public/` 分開維護。修改 UI 時，確認你改的是 `public/` 下的檔案。
+**注意：** 根目錄的 `index.html` **僅為 GitHub Pages 佔位頁**（一段重導說明文字，不含任何應用邏輯）。**正式 UI 唯一來源是 `public/`**。永遠不要在根目錄 `index.html` 加入功能程式碼。
 
 ### 前端關鍵慣例
 

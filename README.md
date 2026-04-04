@@ -65,7 +65,8 @@ Vibe App Store 是一個**社群驅動的 AI 工具目錄**，專為亞洲用戶
 | 前端 | 純 HTML + CSS + JavaScript（無框架，由 Express 提供靜態檔） |
 | 部署 | [Render.com](https://render.com)（含 `render.yaml` 設定） |
 
-> 整個前端只有三個檔案：`public/index.html`、`public/style.css`、`public/app.js`，無需任何建置步驟。
+> 整個前端只有三個檔案：`public/index.html`、`public/style.css`、`public/app.js`，無需任何建置步驟。  
+> **注意：** 根目錄的 `index.html` 僅為 GitHub Pages 佔位頁，不含任何應用功能。正式 UI 的唯一來源是 `public/`。
 
 ---
 
@@ -86,7 +87,7 @@ vibe-app-store/
 │   ├── style.css         # 所有樣式（深色主題、響應式）
 │   └── app.js            # 所有前端邏輯（fetch API、互動、點數系統）
 ├── data/                 # 執行時自動建立，存放 appstore.db（已 gitignore）
-├── index.html            # GitHub Pages 用的靜態版本（不含後端功能）
+├── index.html            # GitHub Pages 佔位頁（僅重導說明，非正式 UI）
 ├── package.json
 ├── render.yaml           # Render.com 一鍵部署設定
 └── README.md
@@ -133,14 +134,29 @@ npm start      # 正式模式（無 watch）
 |------|--------|------|
 | `PORT` | `3000` | HTTP 監聽埠 |
 | `DB_PATH` | `data/appstore.db` | SQLite 資料庫檔案路徑（相對於專案根目錄） |
+| `NODE_ENV` | 未設定 | 設為 `production` 時：啟用 `trust proxy`（反向代理後限流才對「真實客戶 IP」生效）、隱藏 500 錯誤細節 |
 
 可建立 `.env` 檔案（已在 `.gitignore` 中）或直接於 Render 的環境變數設定。
+
+### 安全性（精簡）
+
+- **Helmet**：基本 HTTP 安全標頭；CSP 允許同源腳本／樣式，以及以 iframe 預覽外部工具（`http:` / `https:`）。
+- **500 錯誤**：生產環境僅回傳泛用訊息，不將資料庫或堆疊細節回傳給客戶端（詳見 `server/util/httpError.js`）。
+- **`GET /api/tools`**：`sort` 僅接受 `newest`、`top`、`trending`；`tag` 的 `LIKE` 已逸出 `%`、`_`、`\`，並使用 `ESCAPE`。
+- **`creator` / 創作者查詢**：參數長度上限 100 字元。
+- **GET 限流**：`GET /api/*`（不含下述 health）每 IP 每 15 分鐘 400 次，減輕列表被掃描／刷爆；一般瀏覽與篩選通常遠低於此。
 
 ---
 
 ## API 文件
 
 基底路徑：`/api`，所有請求與回應均為 JSON。
+
+### 健康檢查
+
+#### `GET /api/health`
+
+回傳 `{ "ok": true }`，不查資料庫、**不計入** GET 限流，供 Render / 監控探針使用。回應標頭含 `Cache-Control: no-store`。
 
 ### 工具
 
@@ -274,6 +290,15 @@ git push
 ### 其他平台
 
 任何支援 Node.js 的平台均可部署（Railway、Fly.io、VPS 等），確保設定正確的 `PORT` 與 `DB_PATH` 環境變數即可。
+
+---
+
+## API 濫用防護
+
+- **POST**：`POST /api/*` 每 IP 每 15 分鐘 60 次，超過回傳 `429`。
+- **GET**：其餘 `GET /api/*` 每 IP 每 15 分鐘 400 次；`GET /api/health` 除外。
+
+部署於 Render 等反向代理時請設定 **`NODE_ENV=production`**，伺服器才會啟用 `trust proxy`，限流才會依**客戶端 IP** 計算（否則可能全部算成同一個內網 IP）。此設定為基本防護，不取代正式認證機制。
 
 ---
 
