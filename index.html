@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vibe App Store</title>
+  <meta name="description" content="Vibe App Store — 探索與分享由 AI 協作打造的工具，亞洲最大的 AI 工具社群目錄。">
+  <title>Vibe App Store — AI 工具目錄</title>
   <style>
     :root {
       --bg:       #0c0c0e;
@@ -16,7 +17,7 @@
       --text-dim: #9090aa;
       --danger:   #ff5757;
       --mono: ui-monospace, 'Cascadia Code', 'Fira Code', 'Source Code Pro', Menlo, monospace;
-      --sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --sans: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', system-ui, -apple-system, sans-serif;
       --radius: 6px;
     }
 
@@ -89,8 +90,8 @@
     .hero h1 {
       font-size: clamp(28px, 5vw, 52px);
       font-weight: 800;
-      line-height: 1.08;
-      letter-spacing: -.02em;
+      line-height: 1.15;
+      letter-spacing: -.01em;
       color: var(--text);
       margin-bottom: 14px;
     }
@@ -101,8 +102,9 @@
     .hero p {
       font-size: 16px;
       color: var(--text-dim);
-      max-width: 480px;
+      max-width: 520px;
       margin-bottom: 32px;
+      line-height: 1.7;
     }
 
     /* ── search ──────────────────────────────────── */
@@ -124,8 +126,8 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 10px 14px 10px 40px;
-      font-family: var(--mono);
-      font-size: 13px;
+      font-family: var(--sans);
+      font-size: 14px;
       color: var(--text);
       outline: none;
       transition: border-color .15s;
@@ -196,12 +198,11 @@
       font-size: 15px;
       font-weight: 700;
       color: var(--text);
-      letter-spacing: -.01em;
     }
     .card-desc {
       font-size: 13px;
       color: var(--text-dim);
-      line-height: 1.5;
+      line-height: 1.6;
       flex: 1;
     }
     .card-tags {
@@ -218,6 +219,15 @@
       background: rgba(87, 200, 255, .1);
       color: var(--accent2);
       border: 1px solid rgba(87,200,255,.15);
+    }
+    .lang-badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      background: rgba(163,255,87,.08);
+      color: var(--accent);
+      border: 1px solid rgba(163,255,87,.15);
     }
     .card-footer {
       display: flex;
@@ -245,7 +255,7 @@
     .upvote-btn.voted { border-color: var(--accent); color: var(--accent); background: rgba(163,255,87,.08); }
     .upvote-btn .arrow { font-size: 11px; line-height: 1; }
     .try-btn {
-      font-family: var(--mono);
+      font-family: var(--sans);
       font-size: 12px;
       font-weight: 600;
       color: var(--bg);
@@ -266,7 +276,6 @@
       text-align: center;
       padding: 60px 20px;
       color: var(--muted);
-      font-family: var(--mono);
       font-size: 13px;
     }
     .empty span { font-size: 32px; display: block; margin-bottom: 12px; }
@@ -282,7 +291,6 @@
     .submit-section h2 {
       font-size: 22px;
       font-weight: 700;
-      letter-spacing: -.01em;
       color: var(--text);
       margin-bottom: 6px;
     }
@@ -299,11 +307,13 @@
     }
     .field { display: flex; flex-direction: column; gap: 5px; }
     label {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: .06em;
-      text-transform: uppercase;
+      font-size: 12px;
+      font-weight: 600;
       color: var(--muted);
+    }
+    label .hint {
+      font-weight: 400;
+      font-size: 11px;
     }
     input[type=text], input[type=url], textarea {
       background: var(--surface);
@@ -322,10 +332,9 @@
     textarea { min-height: 80px; }
     .submit-btn {
       align-self: flex-start;
-      font-family: var(--mono);
-      font-size: 13px;
+      font-family: var(--sans);
+      font-size: 14px;
       font-weight: 700;
-      letter-spacing: .04em;
       color: var(--bg);
       background: var(--accent);
       border: none;
@@ -346,7 +355,6 @@
       border: 1px solid rgba(163,255,87,.25);
       border-radius: var(--radius);
       padding: 12px 16px;
-      font-family: var(--mono);
       font-size: 13px;
       color: var(--accent);
       animation: slideIn .25s ease;
@@ -362,8 +370,7 @@
       border-top: 1px solid var(--border);
       padding: 20px clamp(16px, 5vw, 48px);
       text-align: center;
-      font-family: var(--mono);
-      font-size: 11px;
+      font-size: 12px;
       color: var(--muted);
     }
   </style>
@@ -373,25 +380,25 @@
 <header>
   <div class="header-inner">
     <div class="logo">⚡ vibe<span>.store</span></div>
-    <div class="header-meta" id="header-count">— tools</div>
+    <div class="header-meta" id="header-count"></div>
   </div>
 </header>
 
 <div class="hero">
-  <div class="hero-label">// open directory</div>
-  <h1>Discover &amp; share<br><em>AI-built tools</em></h1>
-  <p>A community directory of vibe-coded apps. Browse what people are shipping, try them out, and add your own.</p>
+  <div class="hero-label">// 開放目錄</div>
+  <h1>探索與分享<br><em>AI 打造的工具</em></h1>
+  <p>一個社群目錄，收錄由 AI 協作打造的工具。瀏覽大家的作品、試用看看，或提交你自己做的工具。</p>
   <div class="search-wrap">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
     </svg>
-    <input type="text" id="search" placeholder="search tools..." autocomplete="off">
+    <input type="text" id="search" placeholder="搜尋工具..." autocomplete="off">
   </div>
 </div>
 
 <main>
   <div class="section-header">
-    <h2>All Tools</h2>
+    <h2>所有工具</h2>
     <span id="tool-count">0</span>
   </div>
 
@@ -400,43 +407,74 @@
   <hr class="divider">
 
   <section class="submit-section">
-    <h2>Submit a Tool</h2>
-    <p>Built something with AI? Share it with the community.</p>
+    <h2>提交工具</h2>
+    <p>用 AI 做了什麼有趣的東西？分享給大家吧。</p>
 
-    <div id="flash" class="flash hidden">✓ Tool added — scroll up to see it!</div>
+    <div id="flash" class="flash hidden">✓ 已新增！往上滾動查看。</div>
 
     <form id="submit-form">
       <div class="field">
-        <label for="f-title">Title</label>
-        <input type="text" id="f-title" placeholder="My Awesome Tool" required maxlength="80">
+        <label for="f-title">名稱</label>
+        <input type="text" id="f-title" placeholder="例如：履歷健診 AI" required maxlength="80">
       </div>
       <div class="field">
-        <label for="f-desc">Description</label>
-        <textarea id="f-desc" placeholder="What does it do? Keep it punchy." required maxlength="200"></textarea>
+        <label for="f-desc">描述</label>
+        <textarea id="f-desc" placeholder="這個工具能做什麼？用一兩句話說清楚。" required maxlength="200"></textarea>
       </div>
       <div class="field">
-        <label for="f-url">URL</label>
+        <label for="f-url">網址</label>
         <input type="url" id="f-url" placeholder="https://your-tool.vercel.app" required>
       </div>
       <div class="field">
-        <label for="f-tags">Tags <span style="font-weight:400;text-transform:none;letter-spacing:0">(comma-separated)</span></label>
-        <input type="text" id="f-tags" placeholder="ai, dev, productivity">
+        <label for="f-tags">標籤 <span class="hint">（逗號分隔，最多 5 個）</span></label>
+        <input type="text" id="f-tags" placeholder="ai, 生產力, 開發工具">
       </div>
-      <button type="submit" class="submit-btn">+ Add Tool</button>
+      <div class="field">
+        <label for="f-lang">語言支援</label>
+        <select id="f-lang">
+          <option value="中文">中文</option>
+          <option value="英文">英文</option>
+          <option value="多語言">多語言</option>
+          <option value="日文">日文</option>
+          <option value="韓文">韓文</option>
+        </select>
+      </div>
+      <button type="submit" class="submit-btn">+ 新增工具</button>
     </form>
   </section>
 </main>
 
-<footer>built with vibes · open source · no accounts needed</footer>
+<footer>用 AI 協作打造 · 開放原始碼 · 不需要帳號</footer>
+
+<style>
+  select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a5a72' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+  select:focus { border-color: var(--accent); }
+</style>
 
 <script>
   // ── data ───────────────────────────────────────────────
   const tools = [
-    { id: 1, title: 'Resume Roaster',     desc: 'Paste your resume, get brutally honest AI feedback.',             url: 'https://resume-roaster.vercel.app', tags: ['career','ai'],        votes: 38, voted: false },
-    { id: 2, title: 'Commit Message AI',  desc: 'Generate perfect git commit messages from your diff.',            url: 'https://commitai.dev',              tags: ['dev','productivity'], votes: 27, voted: false },
-    { id: 3, title: 'Cold Email Crafter', desc: 'Write personalized cold emails that actually get replies.',       url: 'https://coldemailcrafter.com',      tags: ['sales','writing'],    votes: 19, voted: false },
-    { id: 4, title: 'SQL Explainer',      desc: 'Paste any SQL query and get a plain-English explanation.',        url: 'https://sqlexplainer.app',          tags: ['dev','sql'],          votes: 14, voted: false },
-    { id: 5, title: 'Landing Page Critic',desc: 'AI critique of your landing page copy and structure.',            url: 'https://lpcritic.com',              tags: ['marketing','ai'],     votes: 11, voted: false },
+    { id: 1, title: '履歷健診 AI',      desc: '貼上你的履歷，立即獲得犀利的 AI 改善建議，讓你的履歷脫穎而出。',   url: 'https://resume-roaster.vercel.app', tags: ['求職','ai'],        lang: '中文', votes: 38, voted: false },
+    { id: 2, title: 'Commit 訊息產生器', desc: '從你的 git diff 自動產生完美的 commit 訊息，告別寫 "fix bug"。',  url: 'https://commitai.dev',              tags: ['開發','生產力'],    lang: '多語言', votes: 27, voted: false },
+    { id: 3, title: '開發提案信撰寫器',  desc: '用 AI 寫出真的會被回覆的開發合作提案信，轉換率大幅提升。',         url: 'https://coldemailcrafter.com',      tags: ['業務','寫作'],      lang: '中文', votes: 19, voted: false },
+    { id: 4, title: 'SQL 白話解釋器',    desc: '貼上任何 SQL 查詢，立即獲得白話文說明，學 SQL 再也不頭痛。',       url: 'https://sqlexplainer.app',          tags: ['開發','資料庫'],    lang: '英文', votes: 14, voted: false },
+    { id: 5, title: '落地頁健診',        desc: 'AI 幫你分析落地頁的文案與結構問題，找出轉換率殺手。',               url: 'https://lpcritic.com',              tags: ['行銷','ai'],        lang: '中文', votes: 11, voted: false },
   ];
   let nextId = 6;
   let query  = '';
@@ -455,19 +493,20 @@
       ? tools.filter(t =>
           t.title.toLowerCase().includes(q) ||
           t.desc.toLowerCase().includes(q) ||
-          t.tags.some(tag => tag.toLowerCase().includes(q))
+          t.tags.some(tag => tag.toLowerCase().includes(q)) ||
+          (t.lang && t.lang.toLowerCase().includes(q))
         )
       : [...tools];
 
-    const grid = document.getElementById('tool-grid');
-    const count = document.getElementById('tool-count');
+    const grid   = document.getElementById('tool-grid');
+    const count  = document.getElementById('tool-count');
     const hcount = document.getElementById('header-count');
 
-    count.textContent = filtered.length + (filtered.length === 1 ? ' tool' : ' tools');
-    hcount.textContent = tools.length + (tools.length === 1 ? ' tool' : ' tools');
+    count.textContent  = filtered.length + ' 個工具';
+    hcount.textContent = tools.length + ' 個工具';
 
     if (filtered.length === 0) {
-      grid.innerHTML = `<div class="empty"><span>🔍</span>${q ? 'No tools match "' + esc(q) + '"' : 'No tools yet.'}</div>`;
+      grid.innerHTML = `<div class="empty"><span>🔍</span>${q ? '找不到符合「' + esc(q) + '」的工具' : '還沒有工具，快來提交第一個！'}</div>`;
       return;
     }
 
@@ -475,13 +514,16 @@
       <article class="card" data-id="${t.id}">
         <div class="card-title">${esc(t.title)}</div>
         <div class="card-desc">${esc(t.desc)}</div>
-        <div class="card-tags">${t.tags.map(tag => `<span class="tag">${esc(tag)}</span>`).join('')}</div>
+        <div class="card-tags">
+          ${t.tags.map(tag => `<span class="tag">${esc(tag)}</span>`).join('')}
+          ${t.lang ? `<span class="lang-badge">${esc(t.lang)}</span>` : ''}
+        </div>
         <div class="card-footer">
           <button class="upvote-btn ${t.voted ? 'voted' : ''}" data-id="${t.id}">
             <span class="arrow">▲</span>
             <span class="vote-num">${t.votes}</span>
           </button>
-          <a class="try-btn" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">Try it →</a>
+          <a class="try-btn" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">立即試用 →</a>
         </div>
       </article>
     `).join('');
@@ -511,10 +553,11 @@
     const title = document.getElementById('f-title').value.trim();
     const desc  = document.getElementById('f-desc').value.trim();
     const url   = document.getElementById('f-url').value.trim();
+    const lang  = document.getElementById('f-lang').value;
     const raw   = document.getElementById('f-tags').value;
     const tags  = raw.split(',').map(t => t.trim()).filter(Boolean).slice(0, 5);
 
-    tools.unshift({ id: nextId++, title, desc, url, tags, votes: 1, voted: true });
+    tools.unshift({ id: nextId++, title, desc, url, tags, lang, votes: 1, voted: true });
     e.target.reset();
     query = '';
     document.getElementById('search').value = '';
