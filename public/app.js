@@ -1,9 +1,10 @@
 /* ── State ──────────────────────────────────────────────── */
-let allTools    = [];
-let activeTag   = '';
-let activeSort  = 'newest';
+let allTools      = [];
+let activeTag     = '';
+let activeSort    = 'newest';
 let activeCreator = '';
-let searchQuery = '';
+let searchQuery   = '';
+let sheetToolId   = null;   // currently open bottom sheet
 
 const DEFAULT_POINTS = 100;
 
@@ -47,13 +48,46 @@ async function apiFetch(path, opts = {}) {
   return res.json();
 }
 
+/* ── Skeleton loading ───────────────────────────────────── */
+function showSkeleton() {
+  const grid = document.getElementById('tool-grid');
+  grid.innerHTML = Array(6).fill(`
+    <div class="skeleton-card">
+      <div class="skel" style="width:60%;height:18px;margin-bottom:12px"></div>
+      <div class="skel" style="width:100%;height:12px;margin-bottom:6px"></div>
+      <div class="skel" style="width:80%;height:12px;margin-bottom:16px"></div>
+      <div style="display:flex;gap:6px">
+        <div class="skel" style="width:48px;height:20px;border-radius:10px"></div>
+        <div class="skel" style="width:48px;height:20px;border-radius:10px"></div>
+      </div>
+    </div>`).join('');
+}
+
+/* ── Load tools from API ────────────────────────────────── */
 async function loadTools() {
+  showSkeleton();
   const params = new URLSearchParams({ sort: activeSort });
   if (activeTag)     params.set('tag', activeTag);
   if (activeCreator) params.set('creator', activeCreator);
   allTools = await apiFetch(`/api/tools?${params}`);
   renderAll();
 }
+
+/* ── Tab navigation ─────────────────────────────────────── */
+function switchTab(tabName) {
+  document.querySelectorAll('.tab').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.tab === tabName)
+  );
+  document.querySelectorAll('.tab-panel').forEach(panel =>
+    panel.classList.toggle('active', panel.id === `tab-${tabName}`)
+  );
+}
+
+document.querySelector('.tab-nav').addEventListener('click', e => {
+  const btn = e.target.closest('.tab');
+  if (!btn) return;
+  switchTab(btn.dataset.tab);
+});
 
 /* ── Tag filters ────────────────────────────────────────── */
 function buildTagFilters() {
@@ -91,7 +125,7 @@ function starsHtml(toolId, avgRating, ratingCount) {
     </div>`;
 }
 
-/* ── Card HTML (shared between featured & main) ─────────── */
+/* ── Card HTML ──────────────────────────────────────────── */
 function cardHtml(t) {
   const costLabel = t.cost > 0
     ? `<button class="use-btn use-btn-paid preview-btn" data-id="${t.id}" data-url="${esc(t.url)}" data-title="${esc(t.title)}" data-cost="${t.cost}">使用（${t.cost} 點）</button>`
@@ -110,18 +144,17 @@ function cardHtml(t) {
           <span class="usage-count">${t.usage_count} 次使用</span>
         </div>
         <div class="card-tags">
-          ${t.tags.map(tag => `<span class="tag">${esc(tag)}</span>`).join('')}
+          ${t.tags.map(tag => `<span class="tag" data-tag="${esc(tag)}">${esc(tag)}</span>`).join('')}
           ${t.lang ? `<span class="lang-badge">${esc(t.lang)}</span>` : ''}
         </div>
         ${starsHtml(t.id, t.avg_rating, t.rating_count)}
       </div>
       <div class="card-footer">
-        <button class="comment-toggle" data-id="${t.id}">
+        <button class="comment-toggle" data-id="${t.id}" data-title="${esc(t.title)}">
           💬 ${t.comment_count} 則留言
         </button>
         ${costLabel}
       </div>
-      <div class="comments-panel" id="comments-${t.id}"></div>
     </article>`;
 }
 
@@ -151,10 +184,9 @@ function renderAll() {
     featuredGrid.innerHTML = '';
   }
 
-  // Main grid (all tools, including featured, so featured also appear in their sorted position)
+  // Main grid
   const filtered = allTools.filter(matchesSearch);
-
-  document.getElementById('tool-count').textContent  = filtered.length + ' 個工具';
+  document.getElementById('tool-count').textContent   = filtered.length + ' 個工具';
   document.getElementById('header-count').textContent = allTools.length + ' 個工具';
 
   const grid = document.getElementById('tool-grid');
@@ -162,7 +194,6 @@ function renderAll() {
     grid.innerHTML = `<div class="empty"><span>🔍</span>${q ? '找不到符合「'+esc(q)+'」的工具' : '還沒有工具，快來提交第一個！'}</div>`;
     return;
   }
-
   grid.innerHTML = filtered.map(cardHtml).join('');
 }
 
@@ -174,83 +205,76 @@ async function useTool(toolId, url, title, cost) {
       alert(`點數不足！需要 ${cost} 點，目前剩餘 ${balance} 點。`);
       return;
     }
-    // Optimistic deduction
     setPoints(balance - cost);
   }
-
   try {
     const result = await apiFetch(`/api/tools/${toolId}/use`, { method: 'POST' });
-    // Update local tool state
     const tool = allTools.find(t => t.id === toolId);
-    if (tool) {
-      tool.usage_count   = result.usage_count;
-      tool.points_earned = result.points_earned;
-    }
-    // Update usage count on visible cards
+    if (tool) { tool.usage_count = result.usage_count; tool.points_earned = result.points_earned; }
     document.querySelectorAll(`.card[data-id="${toolId}"] .usage-count`).forEach(el => {
       el.textContent = `${result.usage_count} 次使用`;
     });
     openPreview(url, title);
   } catch (e) {
-    // Refund on failure
     if (cost > 0) setPoints(getPoints() + cost);
     alert('操作失敗：' + e.message);
   }
 }
 
-/* ── Comments panel ─────────────────────────────────────── */
-async function openComments(toolId) {
-  // May exist in both featured grid and main grid; toggle closest panel
-  const panels = document.querySelectorAll(`#comments-${toolId}`);
-  panels.forEach(async panel => {
-    if (panel.classList.contains('open')) { panel.classList.remove('open'); return; }
-
-    panel.classList.add('open');
-    panel.innerHTML = `<div class="comments-list"><div class="no-comments">載入中...</div></div>`;
-
-    const comments = await apiFetch(`/api/comments/${toolId}`).catch(() => []);
-    const listHtml = comments.length === 0
-      ? `<div class="no-comments">還沒有留言，來第一個吧！</div>`
-      : comments.map(c => `
-          <div class="comment-item">
-            <div class="comment-body">${esc(c.body)}</div>
-            <div class="comment-time">${timeAgo(c.created_at)}</div>
-          </div>`).join('');
-
-    panel.innerHTML = `
-      <div class="comments-list">${listHtml}</div>
-      <div class="comment-form">
-        <input class="comment-input" type="text" placeholder="留下你的想法..." maxlength="500">
-        <button class="comment-submit" data-id="${toolId}">送出</button>
-      </div>`;
-  });
+/* ── Comments bottom sheet ──────────────────────────────── */
+function openSheet(toolId, toolTitle) {
+  sheetToolId = toolId;
+  document.getElementById('sheet-title').textContent = toolTitle + ' 的留言';
+  const sheet = document.getElementById('comments-sheet');
+  sheet.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  loadSheetComments(toolId);
 }
 
-async function postComment(toolId, input) {
-  const body = input.value.trim();
+function closeSheet() {
+  document.getElementById('comments-sheet').classList.remove('open');
+  document.body.style.overflow = '';
+  sheetToolId = null;
+}
+
+async function loadSheetComments(toolId) {
+  const list = document.getElementById('sheet-comments-list');
+  list.innerHTML = '<div class="no-comments">載入中...</div>';
+  const comments = await apiFetch(`/api/comments/${toolId}`).catch(() => []);
+  if (comments.length === 0) {
+    list.innerHTML = '<div class="no-comments">還沒有留言，來第一個吧！</div>';
+    return;
+  }
+  list.innerHTML = comments.map(c => `
+    <div class="comment-item">
+      <div class="comment-body">${esc(c.body)}</div>
+      <div class="comment-time">${timeAgo(c.created_at)}</div>
+    </div>`).join('');
+}
+
+async function postSheetComment() {
+  if (!sheetToolId) return;
+  const input = document.getElementById('sheet-comment-input');
+  const body  = input.value.trim();
   if (!body) return;
   input.disabled = true;
   try {
-    const comment = await apiFetch(`/api/comments/${toolId}`, {
+    const comment = await apiFetch(`/api/comments/${sheetToolId}`, {
       method: 'POST', body: JSON.stringify({ body })
     });
-    // Insert into all matching panels
-    document.querySelectorAll(`#comments-${toolId}`).forEach(panel => {
-      const list  = panel.querySelector('.comments-list');
-      if (!list) return;
-      const noMsg = list.querySelector('.no-comments');
-      if (noMsg) noMsg.remove();
-      const el = document.createElement('div');
-      el.className = 'comment-item';
-      el.innerHTML = `<div class="comment-body">${esc(comment.body)}</div><div class="comment-time">剛剛</div>`;
-      list.prepend(el);
-    });
+    const list  = document.getElementById('sheet-comments-list');
+    const noMsg = list.querySelector('.no-comments');
+    if (noMsg) noMsg.remove();
+    const el = document.createElement('div');
+    el.className = 'comment-item';
+    el.innerHTML = `<div class="comment-body">${esc(comment.body)}</div><div class="comment-time">剛剛</div>`;
+    list.prepend(el);
     input.value = '';
 
-    const tool = allTools.find(t => t.id === toolId);
+    const tool = allTools.find(t => t.id === sheetToolId);
     if (tool) {
       tool.comment_count++;
-      document.querySelectorAll(`.comment-toggle[data-id="${toolId}"]`).forEach(btn => {
+      document.querySelectorAll(`.comment-toggle[data-id="${sheetToolId}"]`).forEach(btn => {
         btn.textContent = `💬 ${tool.comment_count} 則留言`;
       });
     }
@@ -258,11 +282,17 @@ async function postComment(toolId, input) {
   finally { input.disabled = false; input.focus(); }
 }
 
+document.getElementById('sheet-close').addEventListener('click', closeSheet);
+document.getElementById('sheet-backdrop').addEventListener('click', closeSheet);
+document.getElementById('sheet-comment-submit').addEventListener('click', postSheetComment);
+document.getElementById('sheet-comment-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') postSheetComment();
+});
+
 /* ── Rating ─────────────────────────────────────────────── */
 async function submitRating(toolId, stars) {
   if (hasRated(toolId)) return;
   markRated(toolId, stars);
-
   try {
     const agg = await apiFetch(`/api/ratings/${toolId}`, {
       method: 'POST', body: JSON.stringify({ stars })
@@ -297,10 +327,7 @@ function openPreview(url, title) {
   iframe.onload = () => { loaded = true; };
   iframe.src = url;
   setTimeout(() => {
-    if (!loaded) {
-      iframe.style.display = 'none';
-      fallback.classList.remove('hidden');
-    }
+    if (!loaded) { iframe.style.display = 'none'; fallback.classList.remove('hidden'); }
   }, 4000);
 }
 
@@ -337,9 +364,14 @@ async function handleSubmit(e) {
     document.getElementById('search').value = '';
     renderAll();
     e.target.reset();
+    document.getElementById('desc-count').textContent = '0 / 300';
+
     const flash = document.getElementById('flash');
     flash.classList.remove('hidden');
     setTimeout(() => flash.classList.add('hidden'), 4000);
+
+    // Switch to browse tab to show the new tool
+    switchTab('browse');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (err) {
     alert('提交失敗：' + err.message);
@@ -373,7 +405,7 @@ async function lookupCreator() {
   }
 }
 
-/* ── Event delegation (covers both featured-grid and tool-grid) ── */
+/* ── Event delegation ───────────────────────────────────── */
 function attachGridEvents(container) {
   container.addEventListener('click', async e => {
     // Star rating
@@ -384,34 +416,29 @@ function attachGridEvents(container) {
       await submitRating(Number(starsEl.dataset.id), Number(star.dataset.v));
       return;
     }
-    // Comment toggle
+    // Comment toggle → open bottom sheet
     const toggle = e.target.closest('.comment-toggle');
-    if (toggle) { await openComments(Number(toggle.dataset.id)); return; }
-
-    // Comment submit
-    const commentBtn = e.target.closest('.comment-submit');
-    if (commentBtn) {
-      const input = commentBtn.closest('.comment-form').querySelector('.comment-input');
-      await postComment(Number(commentBtn.dataset.id), input);
+    if (toggle) {
+      openSheet(Number(toggle.dataset.id), toggle.dataset.title);
+      return;
+    }
+    // Tag chip click → filter
+    const tagChip = e.target.closest('.tag[data-tag]');
+    if (tagChip) {
+      activeTag = tagChip.dataset.tag;
+      loadTools();
       return;
     }
     // Use / Try button
     const previewBtn = e.target.closest('.preview-btn');
     if (previewBtn) {
-      const id    = Number(previewBtn.dataset.id);
-      const url   = previewBtn.dataset.url;
-      const title = previewBtn.dataset.title;
-      const cost  = Number(previewBtn.dataset.cost);
-      await useTool(id, url, title, cost);
+      await useTool(
+        Number(previewBtn.dataset.id),
+        previewBtn.dataset.url,
+        previewBtn.dataset.title,
+        Number(previewBtn.dataset.cost)
+      );
     }
-  });
-
-  container.addEventListener('keydown', async e => {
-    if (e.key !== 'Enter') return;
-    const input = e.target.closest('.comment-input');
-    if (!input) return;
-    const btn = input.closest('.comment-form').querySelector('.comment-submit');
-    await postComment(Number(btn.dataset.id), input);
   });
 
   // Stars hover
@@ -421,20 +448,19 @@ function attachGridEvents(container) {
     const starsEl = star.closest('.stars');
     if (!starsEl || starsEl.classList.contains('disabled')) return;
     const v = Number(star.dataset.v);
-    starsEl.querySelectorAll('.star').forEach(s => {
-      s.classList.toggle('on', Number(s.dataset.v) <= v);
-    });
+    starsEl.querySelectorAll('.star').forEach(s =>
+      s.classList.toggle('on', Number(s.dataset.v) <= v)
+    );
   });
   container.addEventListener('mouseout', e => {
     const starsEl = e.target.closest('.stars');
     if (!starsEl || starsEl.classList.contains('disabled')) return;
     if (!starsEl.contains(e.relatedTarget)) {
       const toolId = Number(starsEl.dataset.id);
-      const rated  = hasRated(toolId);
-      const filled = rated ? myStars(toolId) : Math.round(allTools.find(t => t.id === toolId)?.avg_rating || 0);
-      starsEl.querySelectorAll('.star').forEach(s => {
-        s.classList.toggle('on', Number(s.dataset.v) <= filled);
-      });
+      const filled = hasRated(toolId) ? myStars(toolId) : Math.round(allTools.find(t => t.id === toolId)?.avg_rating || 0);
+      starsEl.querySelectorAll('.star').forEach(s =>
+        s.classList.toggle('on', Number(s.dataset.v) <= filled)
+      );
     }
   });
 }
@@ -442,7 +468,7 @@ function attachGridEvents(container) {
 attachGridEvents(document.getElementById('featured-grid'));
 attachGridEvents(document.getElementById('tool-grid'));
 
-// Tag filter
+/* ── Tag filter buttons ─────────────────────────────────── */
 document.getElementById('tag-filters').addEventListener('click', e => {
   const btn = e.target.closest('.tag-btn');
   if (!btn) return;
@@ -451,7 +477,7 @@ document.getElementById('tag-filters').addEventListener('click', e => {
   loadTools();
 });
 
-// Sort
+/* ── Sort buttons ───────────────────────────────────────── */
 document.querySelector('.sort-btns').addEventListener('click', e => {
   const btn = e.target.closest('.sort-btn');
   if (!btn) return;
@@ -460,31 +486,45 @@ document.querySelector('.sort-btns').addEventListener('click', e => {
   loadTools();
 });
 
-// Search
+/* ── Search ─────────────────────────────────────────────── */
 document.getElementById('search').addEventListener('input', e => {
   searchQuery = e.target.value;
   renderAll();
 });
 
-// Creator filter
+/* ── Creator filter ─────────────────────────────────────── */
 document.getElementById('creator-select').addEventListener('change', e => {
   activeCreator = e.target.value;
   loadTools();
 });
 
-// Modal close
+/* ── Modal close ────────────────────────────────────────── */
 document.getElementById('modal-close').addEventListener('click', closePreview);
 document.getElementById('modal-backdrop').addEventListener('click', closePreview);
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closePreview(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closePreview(); closeSheet(); }
+});
 
-// Submit form
+/* ── Submit form ────────────────────────────────────────── */
 document.getElementById('submit-form').addEventListener('submit', handleSubmit);
 
-// Creator lookup
+/* ── Desc char counter ──────────────────────────────────── */
+document.getElementById('f-desc').addEventListener('input', e => {
+  document.getElementById('desc-count').textContent = `${e.target.value.length} / 300`;
+});
+
+/* ── Creator lookup ─────────────────────────────────────── */
 document.getElementById('creator-lookup-btn').addEventListener('click', lookupCreator);
 document.getElementById('creator-name-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') lookupCreator();
 });
+
+/* ── Scroll-to-top ──────────────────────────────────────── */
+const scrollTopBtn = document.getElementById('scroll-top');
+window.addEventListener('scroll', () => {
+  scrollTopBtn.classList.toggle('hidden', window.scrollY < 400);
+}, { passive: true });
+scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
 /* ── Init ───────────────────────────────────────────────── */
 refreshPointsUI();

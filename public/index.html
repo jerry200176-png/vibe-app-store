@@ -3,132 +3,181 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Vibe App Store — 探索與分享由 AI 協作打造的工具，亞洲最大的 AI 工具社群目錄。">
+  <meta name="description" content="Vibe App Store — 探索與分享由 AI 協作打造的工具，亞洲社群 AI 工具目錄。">
   <title>Vibe App Store — AI 工具目錄</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 
+<!-- ── Header ─────────────────────────────────────────── -->
 <header>
   <div class="header-inner">
     <div class="logo">⚡ vibe<span>.store</span></div>
     <div class="header-right">
-      <div class="points-pill" id="points-display" title="你的點數餘額"></div>
+      <div class="points-wrap">
+        <div class="points-pill" id="points-display"></div>
+        <div class="points-tooltip">你的虛擬點數餘額<br>免費工具不扣點，付費工具按標示扣除</div>
+      </div>
       <div class="header-meta" id="header-count"></div>
     </div>
   </div>
+  <!-- Tab nav -->
+  <nav class="tab-nav" aria-label="主要導覽">
+    <div class="tab-nav-inner">
+      <button class="tab active" data-tab="browse">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        瀏覽工具
+      </button>
+      <button class="tab" data-tab="submit">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        提交工具
+      </button>
+      <button class="tab" data-tab="creator">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        創作者
+      </button>
+    </div>
+  </nav>
 </header>
 
-<div class="hero">
-  <div class="hero-label">// 開放目錄</div>
-  <h1>探索與分享<br><em>AI 打造的工具</em></h1>
-  <p>一個社群目錄，收錄由 AI 協作打造的工具。瀏覽大家的作品、試用看看，或提交你自己做的工具。</p>
-  <div class="search-wrap">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-    </svg>
-    <input type="text" id="search" placeholder="搜尋工具..." autocomplete="off">
-  </div>
-</div>
-
-<main>
-  <!-- Featured -->
-  <section id="featured-section" class="featured-section hidden">
-    <div class="section-header">
-      <h2>精選推薦</h2>
+<!-- ── Browse tab ──────────────────────────────────────── -->
+<div id="tab-browse" class="tab-panel active">
+  <div class="hero">
+    <div class="hero-label">// 開放目錄</div>
+    <h1>探索與分享<br><em>AI 打造的工具</em></h1>
+    <p>收錄由 AI 協作打造的工具。瀏覽、試用，或分享你自己的作品。</p>
+    <div class="search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="search" placeholder="搜尋工具名稱、標籤..." autocomplete="off">
     </div>
-    <div id="featured-grid" class="featured-grid"></div>
-  </section>
+  </div>
 
-  <!-- Controls -->
-  <div class="controls">
-    <div class="controls-left">
-      <div class="tag-filters" id="tag-filters">
-        <button class="tag-btn active" data-tag="">全部</button>
+  <main>
+    <!-- Featured -->
+    <section id="featured-section" class="featured-section hidden">
+      <div class="section-header">
+        <h2>精選推薦</h2>
+        <span class="section-badge">編輯精選</span>
       </div>
-      <div class="creator-filter">
-        <select id="creator-select">
+      <div id="featured-grid" class="featured-grid"></div>
+    </section>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="controls-left">
+        <div class="tag-filters" id="tag-filters">
+          <button class="tag-btn active" data-tag="">全部</button>
+        </div>
+        <select id="creator-select" class="creator-select">
           <option value="">所有創作者</option>
         </select>
       </div>
+      <div class="sort-btns">
+        <button class="sort-btn active" data-sort="newest">最新</button>
+        <button class="sort-btn" data-sort="top">評分</button>
+        <button class="sort-btn" data-sort="trending">熱門</button>
+      </div>
     </div>
-    <div class="sort-btns">
-      <button class="sort-btn active" data-sort="newest">最新</button>
-      <button class="sort-btn" data-sort="top">評分最高</button>
-      <button class="sort-btn" data-sort="trending">熱門</button>
+
+    <div class="section-header">
+      <h2>所有工具</h2>
+      <span id="tool-count"></span>
     </div>
-  </div>
 
-  <div class="section-header">
-    <h2>所有工具</h2>
-    <span id="tool-count">0</span>
-  </div>
+    <div id="tool-grid"></div>
+  </main>
+</div>
 
-  <div id="tool-grid"></div>
-
-  <hr class="divider">
-
-  <!-- Submit form -->
-  <section class="submit-section">
-    <h2>提交工具</h2>
-    <p>用 AI 做了什麼有趣的東西？分享給大家吧。</p>
-    <div id="flash" class="flash hidden">✓ 已新增！</div>
-    <form id="submit-form">
-      <div class="field">
-        <label for="f-title">名稱</label>
-        <input type="text" id="f-title" placeholder="例如：履歷健診 AI" required maxlength="80">
+<!-- ── Submit tab ──────────────────────────────────────── -->
+<div id="tab-submit" class="tab-panel">
+  <main>
+    <div class="form-page">
+      <div class="form-page-header">
+        <h1>提交你的工具</h1>
+        <p>用 AI 做了什麼有趣的東西？讓更多人發現它。</p>
       </div>
-      <div class="field">
-        <label for="f-desc">描述</label>
-        <textarea id="f-desc" placeholder="這個工具能做什麼？用一兩句話說清楚。" required maxlength="300"></textarea>
-      </div>
-      <div class="field">
-        <label for="f-url">網址</label>
-        <input type="url" id="f-url" placeholder="https://your-tool.vercel.app" required>
-      </div>
-      <div class="field">
-        <label for="f-creator">創作者名稱</label>
-        <input type="text" id="f-creator" placeholder="你的名字或暱稱" required maxlength="40">
-      </div>
-      <div class="field-row">
+      <div id="flash" class="flash hidden">✓ 工具已新增！切換到「瀏覽工具」查看。</div>
+      <form id="submit-form">
         <div class="field">
-          <label for="f-cost">費用（點數） <span class="hint">0 = 免費</span></label>
-          <input type="number" id="f-cost" value="0" min="0" max="100">
+          <label for="f-title">工具名稱 <span class="required">*</span></label>
+          <input type="text" id="f-title" placeholder="例如：履歷健診 AI" required maxlength="80">
         </div>
         <div class="field">
-          <label for="f-lang">語言支援</label>
-          <select id="f-lang">
-            <option value="中文">中文</option>
-            <option value="英文">英文</option>
-            <option value="多語言">多語言</option>
-            <option value="日文">日文</option>
-            <option value="韓文">韓文</option>
-          </select>
+          <label for="f-desc">簡短描述 <span class="required">*</span></label>
+          <textarea id="f-desc" placeholder="這個工具能做什麼？一兩句說清楚最好。" required maxlength="300"></textarea>
+          <span class="char-count" id="desc-count">0 / 300</span>
         </div>
-      </div>
-      <div class="field">
-        <label for="f-tags">標籤 <span class="hint">（逗號分隔，最多 5 個）</span></label>
-        <input type="text" id="f-tags" placeholder="ai, 生產力, 開發工具">
-      </div>
-      <button type="submit" class="submit-btn">+ 新增工具</button>
-    </form>
-  </section>
-
-  <hr class="divider">
-
-  <!-- Creator stats -->
-  <section class="creator-section">
-    <h2>創作者收益查詢</h2>
-    <p>輸入創作者名稱，查看工具使用量與累積收益。</p>
-    <div class="creator-lookup">
-      <input type="text" id="creator-name-input" placeholder="輸入創作者名稱..." maxlength="40">
-      <button id="creator-lookup-btn" class="submit-btn">查詢</button>
+        <div class="field">
+          <label for="f-url">工具網址 <span class="required">*</span></label>
+          <input type="url" id="f-url" placeholder="https://your-tool.vercel.app" required>
+        </div>
+        <div class="field">
+          <label for="f-creator">你的名稱 <span class="required">*</span></label>
+          <input type="text" id="f-creator" placeholder="你的名字或暱稱" required maxlength="40">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="f-cost">費用（點數）<span class="hint"> 0 = 免費</span></label>
+            <input type="number" id="f-cost" value="0" min="0" max="100">
+          </div>
+          <div class="field">
+            <label for="f-lang">語言支援</label>
+            <select id="f-lang">
+              <option value="中文">中文</option>
+              <option value="英文">英文</option>
+              <option value="多語言">多語言</option>
+              <option value="日文">日文</option>
+              <option value="韓文">韓文</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-tags">標籤<span class="hint">（逗號分隔，最多 5 個）</span></label>
+          <input type="text" id="f-tags" placeholder="ai, 生產力, 開發工具">
+        </div>
+        <button type="submit" class="submit-btn">提交工具 →</button>
+      </form>
     </div>
-    <div id="creator-stats" class="creator-stats hidden"></div>
-  </section>
-</main>
+  </main>
+</div>
 
-<!-- Preview modal -->
+<!-- ── Creator tab ─────────────────────────────────────── -->
+<div id="tab-creator" class="tab-panel">
+  <main>
+    <div class="form-page">
+      <div class="form-page-header">
+        <h1>創作者收益查詢</h1>
+        <p>輸入創作者名稱，查看旗下工具的使用量與累積點數收益。</p>
+      </div>
+      <div class="creator-lookup">
+        <input type="text" id="creator-name-input" placeholder="輸入創作者名稱..." maxlength="40">
+        <button id="creator-lookup-btn" class="submit-btn">查詢</button>
+      </div>
+      <div id="creator-stats" class="creator-stats hidden"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ── Comments bottom sheet ──────────────────────────── -->
+<div id="comments-sheet" class="comments-sheet" aria-modal="true" role="dialog">
+  <div id="sheet-backdrop" class="sheet-backdrop"></div>
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title" id="sheet-title">留言</span>
+      <button class="sheet-close" id="sheet-close">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div id="sheet-comments-list" class="sheet-comments-list"></div>
+      <div class="sheet-form">
+        <input class="comment-input" id="sheet-comment-input" type="text" placeholder="留下你的想法..." maxlength="500">
+        <button class="comment-submit" id="sheet-comment-submit">送出</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Preview modal ───────────────────────────────────── -->
 <div id="preview-modal" class="modal hidden">
   <div class="modal-backdrop" id="modal-backdrop"></div>
   <div class="modal-box">
@@ -143,12 +192,15 @@
       <div id="modal-fallback" class="modal-fallback hidden">
         <span>🚫</span>
         <p>此網站不允許嵌入預覽</p>
-        <a id="fallback-link" href="#" target="_blank" rel="noopener noreferrer" class="try-btn">直接開啟 →</a>
+        <a id="fallback-link" href="#" target="_blank" rel="noopener noreferrer" class="use-btn try-btn">直接開啟 →</a>
       </div>
       <iframe id="preview-iframe" src="" title="工具預覽" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
     </div>
   </div>
 </div>
+
+<!-- ── Scroll to top ───────────────────────────────────── -->
+<button id="scroll-top" class="scroll-top hidden" aria-label="回到頂部">↑</button>
 
 <footer>用 AI 協作打造 · 開放原始碼 · 不需要帳號</footer>
 
