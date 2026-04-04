@@ -1,0 +1,14 @@
+# Local / editor
+.claude/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Secrets (if you add later)
+.env
+.env.local
+*.pem
+
+# Dependencies (if you add Node later)
+node_modules/
