@@ -2,7 +2,7 @@
 
 > 探索、評分與討論由 **AI 協作打造**的小工具 — 亞洲社群的開放目錄，無需帳號即可使用。
 
-**線上網址（完整版）：** 部署至 Render 後取得  
+**線上網址（完整版）：** https://vibe-app-store.onrender.com  
 **GitHub Pages（靜態預覽）：** [jerry200176-png.github.io/vibe-app-store](https://jerry200176-png.github.io/vibe-app-store/)
 
 ---
