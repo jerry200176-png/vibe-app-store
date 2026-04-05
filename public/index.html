@@ -283,7 +283,7 @@
         <p>此網站不允許嵌入預覽</p>
         <a id="fallback-link" href="#" target="_blank" rel="noopener noreferrer" class="use-btn try-btn">直接開啟 →</a>
       </div>
-      <iframe id="preview-iframe" src="" title="工具預覽" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+      <iframe id="preview-iframe" src="" title="工具預覽" sandbox="allow-scripts allow-forms allow-popups"></iframe>
     </div>
   </div>
 </div>
@@ -415,7 +415,7 @@
       </div>
       <div class="field">
         <label for="auth-password">密碼</label>
-        <input type="password" id="auth-password" placeholder="至少 6 個字元" required minlength="6">
+        <input type="password" id="auth-password" placeholder="至少 8 個字元" required minlength="8">
       </div>
       <div id="auth-error" class="auth-error hidden"></div>
       <button type="submit" class="submit-btn" id="auth-submit-btn">登入</button>

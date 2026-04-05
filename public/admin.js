@@ -1,3 +1,4 @@
+(function () {
 let adminKey = '';
 
 function adminFetch(path, opts = {}) {
@@ -117,3 +118,4 @@ document.getElementById('admin-login-btn').addEventListener('click', () => {
 document.getElementById('admin-key').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('admin-login-btn').click();
 });
+})();

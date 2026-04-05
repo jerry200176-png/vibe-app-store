@@ -16,8 +16,8 @@ router.post('/register', async (req, res) => {
 
     if (!EMAIL_RE.test(cleanEmail))
       return res.status(400).json({ error: '請輸入有效的 Email' });
-    if (!password || password.length < 6)
-      return res.status(400).json({ error: '密碼至少需要 6 個字元' });
+    if (!password || password.length < 8)
+      return res.status(400).json({ error: '密碼至少需要 8 個字元' });
     if (!cleanName || cleanName.length < 1 || cleanName.length > 40)
       return res.status(400).json({ error: '顯示名稱為 1–40 字' });
 

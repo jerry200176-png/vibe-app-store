@@ -1,4 +1,5 @@
 const express   = require('express');
+const crypto    = require('crypto');
 const router    = express.Router({ mergeParams: true });
 const { getDb } = require('../db');
 const { sendServerError } = require('../util/httpError');
@@ -12,7 +13,15 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: '評分必須是 1 到 5 的整數' });
     if (!await db.get('SELECT id FROM tools WHERE id = ?', [toolId]))
       return res.status(404).json({ error: '找不到此工具' });
+
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    const fp = crypto.createHash('sha256').update(`${toolId}:${ip}`).digest('hex');
+    const already = await db.get('SELECT 1 FROM ratings_fp WHERE tool_id=? AND fp=?', [toolId, fp]);
+    if (already) return res.status(429).json({ error: '你已經評分過這個工具了' });
+
     await db.run('INSERT INTO ratings (tool_id, stars) VALUES (?, ?)', [toolId, stars]);
+    await db.run('INSERT OR IGNORE INTO ratings_fp (tool_id, fp) VALUES (?, ?)', [toolId, fp]);
+
     const agg = await db.get(
       `SELECT ROUND(AVG(stars),1) as avg_rating, COUNT(*) as rating_count FROM ratings WHERE tool_id = ?`,
       [toolId]

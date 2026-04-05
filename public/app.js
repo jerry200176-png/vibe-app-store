@@ -11,8 +11,12 @@ let sinceDays     = 0;
 const DEFAULT_POINTS = 100;
 
 /* ── localStorage helpers ───────────────────────────────── */
-function getRated()   { return JSON.parse(localStorage.getItem('rated_tools') || '{}'); }
-function getMyStars() { return JSON.parse(localStorage.getItem('my_stars')    || '{}'); }
+function safeJson(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key) ?? 'null') ?? fallback; }
+  catch { return fallback; }
+}
+function getRated()   { return safeJson('rated_tools', {}); }
+function getMyStars() { return safeJson('my_stars',    {}); }
 function markRated(id, stars) {
   const r = getRated();   r[id] = true;    localStorage.setItem('rated_tools', JSON.stringify(r));
   const s = getMyStars(); s[id] = stars;   localStorage.setItem('my_stars',    JSON.stringify(s));
@@ -90,7 +94,7 @@ document.getElementById('daily-claim-btn').addEventListener('click', () => {
 });
 
 /* ── Follow helpers ─────────────────────────────────────── */
-function getFollowed() { return JSON.parse(localStorage.getItem('followed_creators') || '[]'); }
+function getFollowed() { return safeJson('followed_creators', []); }
 function setFollowed(list) { localStorage.setItem('followed_creators', JSON.stringify(list)); }
 function isFollowing(name) { return getFollowed().some(n => n.toLowerCase() === name.toLowerCase()); }
 function toggleFollow(name) {
@@ -688,7 +692,15 @@ async function submitRating(toolId, stars) {
 }
 
 /* ── Preview modal ──────────────────────────────────────── */
+function isSafeUrl(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch { return false; }
+}
+
 function openPreview(url, title) {
+  if (!isSafeUrl(url)) return;
   const modal    = document.getElementById('preview-modal');
   const iframe   = document.getElementById('preview-iframe');
   const fallback = document.getElementById('modal-fallback');
