@@ -22,6 +22,14 @@ router.post('/', async (req, res) => {
     await db.run('INSERT INTO ratings (tool_id, stars) VALUES (?, ?)', [toolId, stars]);
     await db.run('INSERT OR IGNORE INTO ratings_fp (tool_id, fp) VALUES (?, ?)', [toolId, fp]);
 
+    const tool = await db.get('SELECT title, owner_user_id FROM tools WHERE id = ?', [toolId]);
+    if (tool?.owner_user_id) {
+      await db.run(
+        `INSERT INTO notifications (user_id, type, tool_id, tool_title, detail) VALUES (?,?,?,?,?)`,
+        [tool.owner_user_id, 'rating', toolId, tool.title, `獲得 ${stars} 星評分`]
+      );
+    }
+
     const agg = await db.get(
       `SELECT ROUND(AVG(stars),1) as avg_rating, COUNT(*) as rating_count FROM ratings WHERE tool_id = ?`,
       [toolId]

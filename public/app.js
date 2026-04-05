@@ -156,6 +156,38 @@ async function apiFetch(path, opts = {}) {
   return res.json();
 }
 
+/* ── Notifications ──────────────────────────────────────── */
+async function fetchNotifications() {
+  if (!currentUser) return;
+  try {
+    const data = await apiFetch('/api/notifications');
+    const unread = data.filter(n => !n.is_read).length;
+    const badge = document.getElementById('notif-badge');
+    if (badge) {
+      badge.textContent = unread > 9 ? '9+' : String(unread);
+      badge.classList.toggle('hidden', unread === 0);
+    }
+    renderNotifPanel(data);
+  } catch { /* ignore */ }
+}
+
+function renderNotifPanel(items) {
+  const list = document.getElementById('notif-list');
+  if (!list) return;
+  if (!items.length) {
+    list.innerHTML = '<div class="notif-empty">沒有通知</div>';
+    return;
+  }
+  list.innerHTML = items.map(n => `
+    <div class="notif-item${n.is_read ? '' : ' unread'}">
+      <span class="notif-icon">${n.type === 'rating' ? '⭐' : '💬'}</span>
+      <div class="notif-body">
+        <div class="notif-title">${esc(n.tool_title)}</div>
+        <div class="notif-detail">${esc(n.detail)}</div>
+      </div>
+    </div>`).join('');
+}
+
 /* ── Auth UI ────────────────────────────────────────────── */
 function updateAuthUI() {
   const authArea = document.getElementById('auth-area');
@@ -169,6 +201,7 @@ function updateAuthUI() {
     authArea.classList.add('hidden');
     userArea.classList.remove('hidden');
     document.getElementById('user-display-name').textContent = currentUser.display_name;
+    fetchNotifications();
     submitGate.classList.add('hidden');
     submitForm.classList.remove('hidden');
     studioGate.classList.add('hidden');
@@ -261,6 +294,26 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   await apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   currentUser = null;
   updateAuthUI();
+});
+
+document.getElementById('notif-btn').addEventListener('click', async () => {
+  const panel = document.getElementById('notif-panel');
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden')) {
+    await apiFetch('/api/notifications/read-all', { method: 'PATCH' }).catch(() => {});
+    fetchNotifications();
+  }
+});
+document.getElementById('notif-read-all').addEventListener('click', async () => {
+  await apiFetch('/api/notifications/read-all', { method: 'PATCH' }).catch(() => {});
+  fetchNotifications();
+});
+document.addEventListener('click', e => {
+  const panel = document.getElementById('notif-panel');
+  if (panel && !panel.classList.contains('hidden') &&
+      !e.target.closest('.notif-wrap')) {
+    panel.classList.add('hidden');
+  }
 });
 
 async function checkAuth() {

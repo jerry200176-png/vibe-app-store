@@ -73,9 +73,20 @@ async function getDb() {
       fp      TEXT    NOT NULL,
       PRIMARY KEY (tool_id, fp)
     );
+    CREATE TABLE IF NOT EXISTS notifications (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type       TEXT    NOT NULL,
+      tool_id    INTEGER REFERENCES tools(id) ON DELETE CASCADE,
+      tool_title TEXT    NOT NULL,
+      detail     TEXT    NOT NULL,
+      is_read    INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
   `);
 
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_usage_log_tool_time ON usage_log(tool_id, created_at);`);
+  await db.exec(`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read, created_at);`);
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);`);
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);`);
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_violations_creator ON violations(creator_name);`);

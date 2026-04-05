@@ -75,6 +75,7 @@ app.use('/api/comments/:toolId', require('./routes/comments'));
 app.use('/api/creators',         require('./routes/creators'));
 app.use('/api/reports',          require('./routes/reports'));
 app.use('/api/admin',            require('./routes/admin'));
+app.use('/api/notifications',    require('./routes/notifications'));
 app.use('/api/transparency',     require('./routes/transparency'));
 app.use('/api/feed.xml',         require('./routes/feed'));
 app.use('/api/site',             require('./routes/site'));

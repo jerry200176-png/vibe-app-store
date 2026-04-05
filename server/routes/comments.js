@@ -28,6 +28,16 @@ router.post('/', async (req, res) => {
     const comment = await db.get(
       `SELECT id, body, created_at FROM comments WHERE id = ?`, [lastID]
     );
+
+    const tool = await db.get('SELECT title, owner_user_id FROM tools WHERE id = ?', [toolId]);
+    if (tool?.owner_user_id) {
+      const snippet = body.slice(0, 30) + (body.length > 30 ? '…' : '');
+      await db.run(
+        `INSERT INTO notifications (user_id, type, tool_id, tool_title, detail) VALUES (?,?,?,?,?)`,
+        [tool.owner_user_id, 'comment', toolId, tool.title, `新留言：${snippet}`]
+      );
+    }
+
     res.status(201).json(comment);
   } catch (e) { sendServerError(res, e); }
 });
