@@ -12,6 +12,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Vibe App Store — AI 工具目錄">
   <meta name="twitter:description" content="審核上架、可檢舉處置、創作者帳號與數據。亞洲中文 AI 工具目錄。">
+  <link rel="alternate" type="application/rss+xml" title="Vibe App Store — 最新工具" href="/api/feed.xml">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -64,6 +65,15 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input type="text" id="search" placeholder="搜尋工具名稱、標籤..." autocomplete="off">
     </div>
+  </div>
+
+  <div id="trust-bar" class="trust-bar" hidden>
+    <span>📊</span>
+    <span id="trust-active">—</span> 款上架工具 ·
+    <span id="trust-pending">—</span> 款審核中 ·
+    <span id="trust-reports">—</span> 則待處理檢舉
+    <a href="/transparency.html" class="trust-link">透明度中心 →</a>
+    <a href="/api/feed.xml" class="trust-link" title="RSS 訂閱">RSS</a>
   </div>
 
   <main>
@@ -433,6 +443,8 @@
       <a href="/terms.html">使用條款</a>
       <span class="footer-sep">·</span>
       <a href="/for-creators.html">創作者招募</a>
+      <span class="footer-sep">·</span>
+      <a href="/api/feed.xml">RSS</a>
     </div>
   </div>
 </footer>

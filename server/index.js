@@ -76,16 +76,21 @@ app.use('/api/creators',         require('./routes/creators'));
 app.use('/api/reports',          require('./routes/reports'));
 app.use('/api/admin',            require('./routes/admin'));
 app.use('/api/transparency',     require('./routes/transparency'));
+app.use('/api/feed.xml',         require('./routes/feed'));
+app.use('/api/site',             require('./routes/site'));
 
 app.get('*', (_req, res) =>
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'))
 );
 
-getDb().then(() => {
-  app.listen(PORT, () =>
+const server = getDb().then(() => {
+  const s = app.listen(PORT, () =>
     console.log(`⚡ Vibe App Store → http://localhost:${PORT}`)
   );
+  return s;
 }).catch(err => {
   console.error('DB init failed:', err);
   process.exit(1);
 });
+
+module.exports = server;

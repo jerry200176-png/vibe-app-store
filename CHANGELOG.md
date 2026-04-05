@@ -10,6 +10,10 @@
 
 - **AI SOP**：預設任務完成後主動 `git commit` + `git push` 至 GitHub（見 `docs/AI_SOP.md`、`CLAUDE.md`、`.cursor/rules`、`AGENTS.md`、`CONTRIBUTING.md`）
 - **SECURITY.md**：新增「開發者本機設定（Claude Code）」— 提醒勿提交或分享 `.claude/`，以及密鑰外洩時應輪替
+- **資料持久化**：`render.yaml` 宣告 Persistent Disk（1 GB `/var/data`），`DB_PATH=/var/data/appstore.db`；重部署不再清空資料庫（需付費方案）
+- **CI**：新增 `scripts/smoke.js` smoke test + `.github/workflows/ci.yml`（Node 18/20 矩陣，push/PR 觸發）
+- **DB 初始化**：修正 `idx_tools_owner` 索引建立順序——現在在 `owner_user_id` 欄位新增之後才建立，避免全新 DB 初始化失敗
+- **server/index.js**：匯出 `http.Server` Promise，供 smoke test 程式性啟動與關閉
 
 ### 新增
 
@@ -23,7 +27,10 @@
 - **差異化 Hero 文案**：首頁副標改為「審核後上架 · 可檢舉與處置 · 創作者帳號與數據」
 - **Open Graph / Twitter Card**：主站 `<head>` 加入 OG 與 Twitter meta 標籤
 - **Cookie 同意條幅**：首次造訪顯示必要 Cookie 說明，localStorage 記錄已關閉
-- **Footer 重整**：拆分為社群準則、透明度中心、隱私權政策、使用條款、創作者招募五個連結
+- **RSS feed**：`GET /api/feed.xml` — 最近 30 筆上架工具的 RSS 2.0 feed（`application/rss+xml`）；`<head>` 加入 RSS autodiscovery `<link>`；footer 新增 RSS 連結
+- **首頁信任列**：header 下方顯示上架工具數、審核中數量、待處理檢舉數（fetch `/api/transparency/summary`），附透明度中心與 RSS 連結
+- **聯絡信箱環境變數化**：新增 `SITE_CONTACT_EMAIL` 環境變數 + `GET /api/site/contact` 端點；`privacy.html`/`terms.html` 以 `site-contact.js` 自動填入信箱
+- **Footer 重整**：拆分為社群準則、透明度中心、隱私權政策、使用條款、創作者招募、RSS 六個連結
 - **創作者帳號系統**：Email + 密碼註冊/登入，JWT httpOnly cookie 驗證，`bcryptjs` 密碼雜湊
 - **帳號綁定工具**：`POST /api/tools` 需登入，工具自動綁定 `owner_user_id`；`PUT`/`DELETE` 檢查擁有權（相容舊版 edit_token）
 - **我的工具**：`GET /api/tools/me` 列出登入者的所有工具（含 pending），供工作室管理

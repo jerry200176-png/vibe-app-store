@@ -147,6 +147,7 @@ npm start      # 正式模式（無 watch）
 | `NODE_ENV` | 未設定 | 設為 `production` 時：啟用 `trust proxy`（反向代理後限流才對「真實客戶 IP」生效）、隱藏 500 錯誤細節、cookie 設為 Secure |
 | `JWT_SECRET` | `dev-secret-change-in-production` | JWT 簽發密鑰，**生產環境必須設定為隨機字串** |
 | `ADMIN_KEY` | 未設定 | 管理員 API 認證密鑰 |
+| `SITE_CONTACT_EMAIL` | 未設定 | 隱私權政策與使用條款頁顯示的聯絡信箱；`render.yaml` 已佔位（`sync: false`），需自行在 Render 儀表板填入 |
 
 可建立 `.env` 檔案（已在 `.gitignore` 中）或直接於 Render 的環境變數設定。`render.yaml` 已設定 `JWT_SECRET` 和 `ADMIN_KEY` 為自動產生。
 
@@ -332,18 +333,26 @@ npm start      # 正式模式（無 watch）
 { "active_tools": 12, "pending_tools": 3, "pending_reports": 1, "total_violations": 5 }
 ```
 
+### RSS
+
+#### `GET /api/feed.xml`
+
+最近 30 筆上架工具的 RSS 2.0 feed。`Content-Type: application/rss+xml`。可用 RSS 閱讀器訂閱最新工具上架通知。
+
 ---
 
 ## 部署
 
-### Render.com（推薦，免費方案）
+### Render.com（推薦）
 
 1. 前往 [render.com](https://render.com) 並用 GitHub 帳號登入
-2. 點 **New → Web Service**，選擇 `vibe-app-store` 儲存庫
-3. Render 會自動讀取 `render.yaml`，設定已完成
-4. 點 **Deploy**，約 2–3 分鐘後取得公開網址
+2. 點 **New → Blueprint**，選擇 `vibe-app-store` 儲存庫
+3. Render 會自動讀取 `render.yaml`（含 **Persistent Disk** 與環境變數），確認後點 **Apply**
+4. 約 2–3 分鐘後取得公開網址
 
-> **注意：** Render 免費方案的磁碟為暫時性，重新部署後資料庫會重置。若需要持久化資料，可升級至付費方案並使用 Persistent Disk，或改用雲端資料庫（如 Supabase、PlanetScale）。
+> **資料持久化：** `render.yaml` 已宣告 1 GB Persistent Disk 掛載於 `/var/data`，`DB_PATH` 指向 `/var/data/appstore.db`。重新部署時**資料庫不會重置**。注意：Persistent Disk **需要付費方案**（Render 免費方案的磁碟為暫時性）。若使用免費方案，可在 Render 儀表板移除 disk 設定，但重部署會清空資料。
+>
+> **首次啟用磁碟後**，舊的暫時性資料不會自動遷移至新 disk；啟用後等同全新資料庫，種子資料會重新載入。
 
 ### 更新部署
 

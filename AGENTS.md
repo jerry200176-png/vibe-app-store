@@ -34,6 +34,7 @@
 ```
 npm run dev   → node --watch server/index.js
 npm start     → node server/index.js
+npm test      → node scripts/smoke.js（CI smoke — 暫存 DB、啟動 server、驗證 /api/health 與 /api/tools）
 ```
 
 預設埠：`3000`（可透過 `PORT` 環境變數覆寫）
@@ -56,7 +57,9 @@ server/
     ├── creators.js   GET /api/creators/stats, GET /api/creators/me（需登入）
     ├── reports.js       POST /api/reports
     ├── admin.js         管理員 API（需 ADMIN_KEY）
-    └── transparency.js  GET /api/transparency/summary（公開唯讀）
+    ├── transparency.js  GET /api/transparency/summary（公開唯讀）
+    ├── feed.js          GET /api/feed.xml（RSS 2.0，最近上架工具）
+    └── site.js          GET /api/site/contact（SITE_CONTACT_EMAIL，公開唯讀）
 ```
 
 **重要：** 使用的是 `sqlite` + `sqlite3`（async/await API），**不是** `better-sqlite3`（sync API）。修改 DB 相關程式碼時請使用 `await db.all()` / `await db.get()` / `await db.run()` 形式。
@@ -101,7 +104,8 @@ public/
 ├── terms.html           使用條款（純靜態）
 ├── admin.html           管理員後台
 ├── admin.js             管理員前端邏輯
-└── admin-style.css      管理員樣式
+├── admin-style.css      管理員樣式
+└── site-contact.js      法務頁共用腳本（fetch /api/site/contact → 填入信箱）
 ```
 
 **注意：** 根目錄的 `index.html` **僅為 GitHub Pages 佔位頁**（一段重導說明文字，不含任何應用邏輯）。**正式 UI 唯一來源是 `public/`**。永遠不要在根目錄 `index.html` 加入功能程式碼。
@@ -139,8 +143,10 @@ public/
 | GET | `/api/creators/stats?name=` | 公開創作者統計 |
 | GET | `/api/creators/me` | 我的創作者統計（需登入） |
 | GET | `/api/transparency/summary` | 平台營運概況（公開唯讀） |
+| GET | `/api/feed.xml` | RSS 2.0 feed — 最近 30 筆上架工具（`application/rss+xml`） |
+| GET | `/api/site/contact` | 聯絡信箱（env `SITE_CONTACT_EMAIL`，未設定則回傳 `null`） |
 
-所有 API 回應為 JSON；錯誤回應格式 `{ "error": "說明" }`。
+所有 API 回應為 JSON（`/api/feed.xml` 除外，回傳 XML）；錯誤回應格式 `{ "error": "說明" }`。
 
 ---
 
@@ -199,6 +205,8 @@ public/
 | `CONTRIBUTING.md` | 開發流程、PR 規範、手動測試、程式風格 |
 | `SECURITY.md` | 安全漏洞回報、威脅與取捨 |
 | `CHANGELOG.md` | 版本變更紀錄 |
+| `.github/workflows/ci.yml` | GitHub Actions CI（push/PR 時跑 `npm test`） |
+| `scripts/smoke.js` | smoke test：暫存 DB → 啟動 server → 驗證關鍵端點 |
 | `AGENTS.md` | 本檔：給 AI 代理的技術脈絡 |
 | `.cursor/rules/vibe-app-store.mdc` | Cursor 自動載入的規則 |
 | `CLAUDE.md` | Claude Code 自動載入的專案指引（與本檔、`docs/AI_SOP` 對齊） |

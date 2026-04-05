@@ -1073,6 +1073,19 @@ function handleDeepLink() {
   });
 })();
 
+/* ── Trust bar ─────────────────────────────────────────── */
+(async function initTrustBar() {
+  try {
+    const res = await fetch('/api/transparency/summary');
+    if (!res.ok) return;
+    const d = await res.json();
+    document.getElementById('trust-active').textContent = d.active_tools ?? '—';
+    document.getElementById('trust-pending').textContent = d.pending_tools ?? '—';
+    document.getElementById('trust-reports').textContent = d.pending_reports ?? '—';
+    document.getElementById('trust-bar').hidden = false;
+  } catch (_) {}
+})();
+
 /* ── Init ───────────────────────────────────────────────── */
 refreshPointsUI();
 loadTools().then(handleDeepLink);

@@ -68,13 +68,17 @@ async function getDb() {
       reason       TEXT    NOT NULL,
       created_at   INTEGER NOT NULL DEFAULT (unixepoch())
     );
+    CREATE TABLE IF NOT EXISTS ratings_fp (
+      tool_id INTEGER NOT NULL,
+      fp      TEXT    NOT NULL,
+      PRIMARY KEY (tool_id, fp)
+    );
   `);
 
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_usage_log_tool_time ON usage_log(tool_id, created_at);`);
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);`);
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);`);
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_violations_creator ON violations(creator_name);`);
-  await db.exec(`CREATE INDEX IF NOT EXISTS idx_tools_owner ON tools(owner_user_id);`);
 
   // Idempotent column additions for v2
   const cols = await db.all(`PRAGMA table_info(tools)`);
@@ -98,6 +102,8 @@ async function getDb() {
     await db.exec(`ALTER TABLE tools ADD COLUMN reviewed_at INTEGER`);
   if (!has('owner_user_id'))
     await db.exec(`ALTER TABLE tools ADD COLUMN owner_user_id INTEGER REFERENCES users(id)`);
+
+  await db.exec(`CREATE INDEX IF NOT EXISTS idx_tools_owner ON tools(owner_user_id);`);
 
   // Seed initial tools if empty
   const { n } = await db.get('SELECT COUNT(*) as n FROM tools');

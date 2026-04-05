@@ -70,8 +70,35 @@
 
 ---
 
+## ADR-009：Render Persistent Disk + DB_PATH 為正式環境預設持久化
+
+- **狀態：** 已採納  
+- **情境：** Render 免費方案磁碟為暫時性，重部署會清空 SQLite 資料。  
+- **決定：** `render.yaml` 宣告 1 GB Persistent Disk（`/var/data`），`DB_PATH=/var/data/appstore.db`。`server/db.js` 已支援 `DB_PATH` 環境變數。  
+- **後果：** 需付費方案才能使用 disk；免費方案仍可部署但重啟後資料重置。首次啟用 disk 後舊暫時性資料不會自動遷移。不遷移 PostgreSQL — 若未來需要，另起 ADR。
+
+---
+
+## ADR-010：GitHub Actions CI smoke test
+
+- **狀態：** 已採納  
+- **決定：** `npm test` 執行 `scripts/smoke.js`：以暫存 DB 啟動 server，驗證 `/api/health` 與 `/api/tools` 回應正常後關閉。`.github/workflows/ci.yml` 在 push/PR 時跑 Node 18 + 20 矩陣。  
+- **後果：** PR 需通過 CI。不做完整 e2e — 若需要，另起 ADR。
+
+---
+
+## ADR-011：聯絡信箱以 SITE_CONTACT_EMAIL 環境變數設定
+
+- **狀態：** 已採納  
+- **情境：** `privacy.html` / `terms.html` 需顯示聯絡信箱，但不應 hard-code 在原始碼中。  
+- **決定：** 新增 `GET /api/site/contact` 端點回傳 `{ email }` 或 `null`；靜態頁以 `site-contact.js` 載入並填入 `[data-contact-email]` 元素。`render.yaml` 佔位 `SITE_CONTACT_EMAIL`（`sync: false`，需在 Render UI 自行填入）。  
+- **後果：** 營運者只需改 env 不需改靜態檔。未設定時頁面顯示佔位提示。
+
+---
+
 ## 修訂紀錄
 
 | 日期 | 說明 |
 |------|------|
 | 2026-04-05 | 初版：整理與程式碼一致的關鍵決策 |
+| 2026-04-05 | 新增 ADR-009（Persistent Disk）、ADR-010（CI）、ADR-011（聯絡信箱 env） |
