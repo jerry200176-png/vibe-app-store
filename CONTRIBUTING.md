@@ -81,6 +81,7 @@ git commit -m "feat: 新增依語言篩選功能"
 - 說明「做了什麼」與「為什麼」
 - 如果關聯到某個 Issue，加上 `Closes #123`
 - 若更動 API 或資料庫 schema，同步更新 `README.md` 的 API 文件與 `CHANGELOG.md`
+- **發版時**：勿讓 `[Unreleased]` 無限膨脹 — 將條目移入新版本（`## [x.y.z] - 日期`），更新 `package.json` 的 `version` 與 `CHANGELOG.md` 底部連結（見檔首維護說明）
 - 若更動**產品邊界**（審核流程、匿名／登入規則、公開列表條件），同步更新 `docs/DECISIONS.md` 與 `docs/AI_SOP.md`（必要時 `AGENTS.md`）
 
 ### AI／自動化代理（Cursor、Claude Code）

@@ -2,115 +2,107 @@
 
 本專案遵循 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/) 格式，版本號採 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
 
+**維護習慣：** 每次可發布變更從 `[Unreleased]` 移入新版本區塊（訂版號、寫日期），`[Unreleased]` 僅保留進行中項目，避免無限堆疊。
+
 ---
 
 ## [Unreleased]
 
-### 改善
+（尚無 — 下一批變更先寫在此，發版時再移到新版本標題下。）
 
-- **AI SOP**：預設任務完成後主動 `git commit` + `git push` 至 GitHub（見 `docs/AI_SOP.md`、`CLAUDE.md`、`.cursor/rules`、`AGENTS.md`、`CONTRIBUTING.md`）
-- **SECURITY.md**：新增「開發者本機設定（Claude Code）」— 提醒勿提交或分享 `.claude/`，以及密鑰外洩時應輪替
-- **Render 部署**：`render.yaml` 改為預設不含 Persistent Disk，免費 Web Service 可直接套用 Blueprint；資料庫在重部署後會重置。付費後可於儀表板掛 disk 並設定 `DB_PATH`（見 README）
-- **CI**：新增 `scripts/smoke.js` smoke test + `.github/workflows/ci.yml`（Node 18/20 矩陣，push/PR 觸發）
-- **DB 初始化**：修正 `idx_tools_owner` 索引建立順序——現在在 `owner_user_id` 欄位新增之後才建立，避免全新 DB 初始化失敗
-- **server/index.js**：匯出 `http.Server` Promise，供 smoke test 程式性啟動與關閉
+---
 
-### 新增
+## [2.0.1] - 2026-04-05
 
-- **文件與 AI 協作**：`docs/AI_SOP.md`（代理標準作業程序）、`docs/DECISIONS.md`（ADR 精簡版）、`docs/README.md`；`CLAUDE.md`（Claude Code 自動載入）；`.cursor/rules/vibe-app-store.mdc`（Cursor 自動載入）
-- **靜態頁面**：創作者招募（`/for-creators.html`）、透明度中心（`/transparency.html`）、隱私權政策（`/privacy.html`）、使用條款（`/terms.html`）
-- **透明度 API**：`GET /api/transparency/summary` — 公開唯讀端點，回傳上架工具數、待審工具數、待處理檢舉數、累計違規數
-- **本週上新**：`GET /api/tools` 新增 `since_days` 查詢參數（1–90）；前端排序列新增「本週上新」按鈕
-- **工具深層連結**：支援 `?tool=<id>` URL，自動捲動並高亮對應卡片
-- **分享/複製連結**：卡片新增分享按鈕（優先 `navigator.share`，否則複製連結）；工作室「我的工具」新增「複製連結」
-- **追蹤創作者新工具標記**：追蹤的創作者若有 7 天內的新工具，卡片顯示「新」badge
-- **差異化 Hero 文案**：首頁副標改為「審核後上架 · 可檢舉與處置 · 創作者帳號與數據」
-- **Open Graph / Twitter Card**：主站 `<head>` 加入 OG 與 Twitter meta 標籤
-- **Cookie 同意條幅**：首次造訪顯示必要 Cookie 說明，localStorage 記錄已關閉
-- **RSS feed**：`GET /api/feed.xml` — 最近 30 筆上架工具的 RSS 2.0 feed（`application/rss+xml`）；`<head>` 加入 RSS autodiscovery `<link>`；footer 新增 RSS 連結
-- **首頁信任列**：header 下方顯示上架工具數、審核中數量、待處理檢舉數（fetch `/api/transparency/summary`），附透明度中心與 RSS 連結
-- **聯絡信箱環境變數化**：新增 `SITE_CONTACT_EMAIL` 環境變數 + `GET /api/site/contact` 端點；`privacy.html`/`terms.html` 以 `site-contact.js` 自動填入信箱
-- **Footer 重整**：拆分為社群準則、透明度中心、隱私權政策、使用條款、創作者招募、RSS 六個連結
-- **創作者帳號系統**：Email + 密碼註冊/登入，JWT httpOnly cookie 驗證，`bcryptjs` 密碼雜湊
-- **帳號綁定工具**：`POST /api/tools` 需登入，工具自動綁定 `owner_user_id`；`PUT`/`DELETE` 檢查擁有權（相容舊版 edit_token）
-- **我的工具**：`GET /api/tools/me` 列出登入者的所有工具（含 pending），供工作室管理
-- **我的統計**：`GET /api/creators/me` 依 `owner_user_id` 聚合創作者統計
-- **前端登入/註冊 UI**：Header 登入/註冊按鈕、Auth Modal、提交工具與工作室分頁的登入門檻
-- **登入/註冊限流**：每 15 分鐘 15 次/IP，防止撞庫
+### Changed
+
+- **CHANGELOG**：依語意化版本整理為 0.1.0 → 1.0.0 → 1.1.0 → 2.0.0 分段，避免 `[Unreleased]` 長期堆疊；檔首補維護說明；更新底部 compare 連結。
+- **`package.json`**：`version` 由 `1.0.0` 調整為 `2.0.0`，與目前產品與 CHANGELOG 一致。
+- **協作文件**：`docs/AI_SOP.md`、`CONTRIBUTING.md` 補充「發版時從 Unreleased 收斂至新版本」的流程。
+
+---
+
+## [2.0.0] - 2026-04-05
 
 ### Breaking Changes
 
-- **匿名投稿已關閉**：`POST /api/tools` 不再接受未登入的請求（回傳 401）。舊版透過 `creator_name` body 欄位投稿的方式已移除。
-- **`users` 表**：新增 `users` 資料表；`tools` 新增 `owner_user_id` 可空欄位
-- **環境變數**：生產環境必須設定 `JWT_SECRET`
+- **匿名投稿已關閉**：`POST /api/tools` 須登入（未登入回傳 401）；不再接受 body 內 `creator_name` 偽造。
+- **資料庫**：新增 `users` 表；`tools` 新增可空 `owner_user_id`。
+- **環境變數**：生產環境須設定 `JWT_SECRET`。
 
-### 新增（先前）
+### Added
 
-- **點數系統**：使用者初始 100 點（localStorage），付費工具需扣點；餘額顯示於 header
-- **創作者歸屬**：每個工具關聯 `creator_name`，卡片上顯示 "by XXX"，支援依創作者篩選
-- **創作者收益查詢**：`GET /api/creators/stats?name=`，前端查詢面板顯示使用量與累積收益
-- **精選推薦**：首頁頂部 Featured 區塊，透過 `is_featured` 欄位標記（僅限後端設定）
-- **熱門排序**：`sort=trending`，基於近 7 天使用量 + 評分加權
-- **使用記錄 API**：`POST /api/tools/:id/use`，記錄 `usage_log` 並遞增 `usage_count` / `points_earned`
-- **DB migration**：idempotent `ALTER TABLE` 為 `tools` 表新增 `creator_name`, `cost`, `usage_count`, `points_earned`, `is_featured` 欄位；新增 `usage_log` 表
-- **UI**：費用 chip、使用次數、付費按鈕（金色）與免費按鈕（綠色）、header 點數 pill
+- **創作者帳號**：Email + 密碼註冊／登入，JWT httpOnly cookie、`bcryptjs` 雜湊；Header Auth UI、提交／工作室登入門檻。
+- **帳號與工具**：`POST /api/tools` 綁定 `owner_user_id`；`PUT`/`DELETE` 驗證擁有權（相容舊 `x-edit-token`）；`GET /api/tools/me`、`GET /api/creators/me`。
+- **審核與安全**：工具 `pending`/`active`/`removed`；檢舉 API、管理員 API（`ADMIN_KEY`）、違規 Strike、後台 `admin.html`（外掛 JS/CSS 符合 CSP）。
+- **靜態與合規**：`/for-creators.html`、`/transparency.html`、`/privacy.html`、`/terms.html`；Cookie 同意條幅。
+- **API**：`GET /api/transparency/summary`、`GET /api/feed.xml`（RSS）、`GET /api/site/contact`（`SITE_CONTACT_EMAIL`）；`GET /api/tools?since_days=`；`site-contact.js` 注入聯絡信箱。
+- **前端體驗**：本週上新、`?tool=<id>` 深連結、分享／複製連結、追蹤創作者「新」badge、首頁信任列、OG/Twitter meta、Footer 含 RSS。
+- **限流**：登入／註冊端點額外嚴格限流。
+- **開發與文件**：`docs/AI_SOP.md`、`docs/DECISIONS.md`、`docs/README.md`、`CLAUDE.md`、`.cursor/rules/vibe-app-store.mdc`；預設任務收尾 `commit`+`push` 寫入 SOP／CONTRIBUTING／AGENTS。
+- **CI**：`scripts/smoke.js`、`npm test`、`.github/workflows/ci.yml`（Node 18／20）；`server/index.js` 匯出 `Server` Promise 供 smoke 使用。
+- **SECURITY.md**：Claude Code／`.claude` 勿提交等說明。
 
-### 改善
+### Changed
 
-- **熱門排序 SQL**：將重複的 correlated subquery 改為單次聚合 `LEFT JOIN`，降低 `usage_log` 掃描量
-- **`/use` 交易安全**：`POST /api/tools/:id/use` 的 `INSERT usage_log` + `UPDATE tools` 包進 `BEGIN IMMEDIATE` / `COMMIT` / `ROLLBACK`
-- **`usage_log` 索引**：新增 `idx_usage_log_tool_time(tool_id, created_at)` 加速熱門排序與統計
-- **雙入口釐清**：根目錄 `index.html` 精簡為 GitHub Pages 佔位頁；README / AGENTS 明確標注 `public/` 為唯一正式 UI
-- **API 限流**：`POST /api/*` 加上 `express-rate-limit`（每 15 分鐘 60 次/IP），防止基本濫用
-- **資安強化**：`helmet` 安全標頭；`production` 下 `trust proxy` 與限流 IP 正確；`sendServerError` 隱藏生產環境 500 細節；`sort` 白名單、`tag` LIKE 逸出、創作者查詢長度上限
-- **`GET /api/health`**：供監控／Render health check，不查 DB、不計入 GET 限流
-- **GET API 限流**：`GET /api/*`（health 除外）每 15 分鐘 400 次／IP
+- **Render**：`render.yaml` 預設不含 Persistent Disk，對齊免費 Web Service；持久化改儀表板選配 Disk + `DB_PATH`（見 README）。
+
+### Fixed
+
+- **DB 初始化**：`idx_tools_owner` 改於 `owner_user_id` 欄位存在後再建立，避免全新庫啟動失敗。
+
+---
+
+## [1.1.0] - 2026-04-05
+
+### Added
+
+- **點數**：localStorage 初始 100 點，付費工具扣點；Header 顯示餘額。
+- **創作者與精選**：`creator_name`、依創作者篩選、`GET /api/creators/stats`；`is_featured` 與首頁 Featured 區。
+- **熱門與使用**：`sort=trending`（近 7 日使用 + 評分）；`POST /api/tools/:id/use` 與 `usage_log`。
+- **資料庫**：`tools` 擴充欄位與 `usage_log` 表（idempotent `ALTER`）。
+
+### Changed
+
+- **UI**：費用 chip、使用次數、付費／免費試用按鈕樣式。
+- **熱門排序 SQL**：correlated subquery 改為單次 `LEFT JOIN` 聚合。
+- **`/use` 交易**：`BEGIN IMMEDIATE`／`COMMIT`／`ROLLBACK` 包住寫入。
+- **索引**：`idx_usage_log_tool_time(tool_id, created_at)`。
+- **雙入口**：根目錄 `index.html` 僅 GitHub Pages 佔位；正式 UI 僅 `public/`。
+- **限流與資安**：`POST /api/*` 限流；`helmet`、`trust proxy`（prod）、`sendServerError`；`sort` 白名單、`tag` LIKE 逸出、創作者查詢長度上限。
+- **`GET /api/health`**：監控用，不計入 GET 限流。
+- **GET 限流**：`GET /api/*`（health 除外）每 15 分鐘 400 次／IP。
 
 ---
 
 ## [1.0.0] - 2026-04-05
 
-### 新增
+### Added
 
-- **後端**：Node.js + Express 伺服器（`server/index.js`）
-- **資料庫**：SQLite 持久化儲存（`server/db.js`），使用 `sqlite` + `sqlite3` 套件
-- **REST API**：
-  - `GET /api/tools` — 支援 `sort`（newest / top）與 `tag` 篩選
-  - `POST /api/tools` — 新增工具，含 URL 格式驗證
-  - `POST /api/ratings/:toolId` — 1–5 星評分
-  - `GET /api/comments/:toolId` — 取得留言列表
-  - `POST /api/comments/:toolId` — 新增留言
-- **評分系統**：星等評分 UI、即時更新平均分，透過 `localStorage` 防止 session 內重複評分
-- **留言系統**：可展開的留言面板、Enter 快速送出、相對時間顯示
-- **排序**：最新 / 評分最高
-- **標籤篩選**：動態標籤 chip，點擊即篩選
-- **iframe 預覽 Modal**：嵌入預覽 + 偵測失敗時顯示 fallback 按鈕
-- **前端拆分**：HTML / CSS / JS 分離至 `public/` 目錄
-- **部署設定**：`render.yaml` 支援 Render.com 一鍵部署
+- **後端**：Node.js + Express（`server/index.js`）。
+- **資料庫**：SQLite（`server/db.js`），`sqlite` + `sqlite3`。
+- **REST API**：`GET/POST /api/tools`、`POST /api/ratings/:toolId`、`GET/POST /api/comments/:toolId`（含 URL 驗證）。
+- **前端**：評分、留言、排序、標籤、iframe 預覽；`public/` 拆分 HTML／CSS／JS。
+- **部署**：`render.yaml`（Render 一鍵部署）。
 
-### 變更
+### Changed
 
-- 前端從單一 `index.html` 重構為 `public/` 下的三個獨立檔案
-- 狀態管理從 in-memory JS 陣列改為 API fetch 呼叫
-- 移除舊的 `upvote` 機制，改為 1–5 星評分系統
+- 狀態改為以 API fetch 為主；移除舊 upvote，改 1–5 星評分。
 
 ---
 
 ## [0.1.0] - 2026-04-05
 
-### 新增
+### Added
 
-- 單一 `index.html` 靜態應用（純 HTML + CSS + JS，無後端）
-- 工具列表（卡片式呈現）與即時搜尋
-- 基本表單：提交新工具（名稱、描述、網址、標籤、語言）
-- 上投票 (upvote) 系統（in-memory，重整後重置）
-- 5 筆範例工具（亞洲市場相關）
-- 繁體中文介面，加入 PingFang TC / Microsoft JhengHei 字體
-- 部署至 GitHub Pages
-- `render.yaml`、`README`、`CONTRIBUTING`、`SECURITY`、`AGENTS`、`CHANGELOG` 等專案文件
+- 單一 `index.html` 靜態原型（無後端）、搜尋、提交表單、upvote、範例工具、繁中 UI、GitHub Pages。
+- 初始專案文件（`README`、`CONTRIBUTING`、`SECURITY`、`AGENTS` 等）。
 
 ---
 
-[Unreleased]: https://github.com/jerry200176-png/vibe-app-store/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/jerry200176-png/vibe-app-store/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/jerry200176-png/vibe-app-store/compare/v2.0.0...v2.0.1
+[2.0.0]: https://github.com/jerry200176-png/vibe-app-store/compare/v1.1.0...v2.0.0
+[1.1.0]: https://github.com/jerry200176-png/vibe-app-store/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/jerry200176-png/vibe-app-store/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/jerry200176-png/vibe-app-store/releases/tag/v0.1.0

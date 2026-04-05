@@ -47,7 +47,7 @@
 4. **驗證**：
    - 後端：必要時 `node -e "require('./server/...')"` 或啟動 `npm run dev` 手測。
    - 前端：與認證相關的 `fetch` 必須 `credentials: 'include'`（專案已集中在 `apiFetch`）。
-5. **文件**：`CHANGELOG.md` `[Unreleased]` 加上條目；API／schema 變更更新 `README.md`；架構慣例變更更新 `AGENTS.md`。
+5. **文件**：變更寫入 `CHANGELOG.md` **\[Unreleased\]**；API／schema 變更更新 `README.md`；架構慣例變更更新 `AGENTS.md`。若本次等同**可發布版本**（例如使用者要求發版、或累積功能該切段），應**訂語意化版號**：將 `[Unreleased]` 內容移入新版本標題（如 `## [2.1.0] - YYYY-MM-DD`）、清空 `[Unreleased]` 佔位說明、`package.json` 的 `version` 對齊，並更新 `CHANGELOG.md` 底部 compare 連結。
 6. **不要改**：使用者提供的計畫檔（例如 `.cursor/plans/*.plan.md`）除非使用者明確要求。
 7. **同步 GitHub（預設必做，不必等使用者提醒）**：只要本次對話**已做出可交付的檔案變更**，且使用者**沒有**說「不要提交／不要 push／僅本地／先別動 git」，代理應在收尾時**主動**完成版本控制與遠端更新：
    - `git status` 確認變更；**勿** `git add` 機敏或已忽略路徑（`.env`、`.claude/`、`data/*.db` 等）。

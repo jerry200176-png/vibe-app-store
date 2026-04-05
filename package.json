@@ -1,6 +1,6 @@
 {
   "name": "vibe-app-store",
-  "version": "1.0.0",
+  "version": "2.0.1",
   "description": "AI 工具社群目錄 — 探索、試用、分享 AI 打造的工具",
   "main": "server/index.js",
   "scripts": {
