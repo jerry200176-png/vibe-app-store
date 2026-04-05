@@ -12,11 +12,15 @@ async function smoke() {
   const server = await serverPromise;
 
   const addr = server.address();
+  if (!addr || typeof addr.port !== 'number') {
+    throw new Error(`server.address() not ready: ${JSON.stringify(addr)}`);
+  }
   const port = addr.port;
+  const host = 'localhost';
 
   const get = (urlPath) =>
     new Promise((resolve, reject) => {
-      http.get(`http://127.0.0.1:${port}${urlPath}`, (res) => {
+      http.get(`http://${host}:${port}${urlPath}`, (res) => {
         let body = '';
         res.on('data', (c) => (body += c));
         res.on('end', () => resolve({ status: res.statusCode, body }));

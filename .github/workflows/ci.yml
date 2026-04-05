@@ -9,8 +9,11 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         node-version: [18, 20]
+    env:
+      JWT_SECRET: github-actions-ci-smoke-only-not-a-real-secret
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

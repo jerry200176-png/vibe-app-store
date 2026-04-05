@@ -84,14 +84,22 @@ app.get('*', (_req, res) =>
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'))
 );
 
-const server = getDb().then(() => {
-  const s = app.listen(PORT, () =>
-    console.log(`⚡ Vibe App Store → http://localhost:${PORT}`)
-  );
-  return s;
-}).catch(err => {
-  console.error('DB init failed:', err);
-  process.exit(1);
-});
+const serverReady = getDb()
+  .then(
+    () =>
+      new Promise((resolve, reject) => {
+        const s = app.listen(PORT, () => {
+          const addr = s.address();
+          const p = typeof addr === 'object' && addr ? addr.port : PORT;
+          console.log(`⚡ Vibe App Store → http://localhost:${p}`);
+          resolve(s);
+        });
+        s.on('error', reject);
+      })
+  )
+  .catch((err) => {
+    console.error('DB init failed:', err);
+    process.exit(1);
+  });
 
-module.exports = server;
+module.exports = serverReady;

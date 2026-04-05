@@ -8,7 +8,14 @@
 
 ## [Unreleased]
 
-（尚無 — 下一批變更先寫在此，發版時再移到新版本標題下。）
+### Fixed
+
+- **CI smoke**：`server/index.js` 改為在 HTTP `listening` 之後才 resolve 匯出的 Promise，避免 Linux runner 上 `server.address()` 仍為 `null` 而失敗。
+- **JWT_SECRET**：非 `production` 時允許使用開發用預設值；生產環境仍須設定 `JWT_SECRET`。CI workflow 另設 `JWT_SECRET` 環境變數；矩陣改 `fail-fast: false` 以便兩個 Node 版本各自顯示結果。
+
+### Changed
+
+- **smoke**：HTTP 改連 `localhost`；`address()` 未就緒時拋出明確錯誤。
 
 ---
 

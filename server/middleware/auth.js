@@ -1,8 +1,11 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const isProd = process.env.NODE_ENV === 'production';
+const JWT_SECRET =
+  process.env.JWT_SECRET ||
+  (isProd ? null : 'dev-secret-change-in-production');
 if (!JWT_SECRET) {
-  console.error('[FATAL] JWT_SECRET 環境變數未設定，伺服器拒絕啟動。');
+  console.error('[FATAL] 生產環境必須設定 JWT_SECRET（隨機字串）。');
   process.exit(1);
 }
 const JWT_EXPIRES = '7d';
