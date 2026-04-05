@@ -3,8 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Vibe App Store — 探索與分享由 AI 協作打造的工具，亞洲社群 AI 工具目錄。">
+  <meta name="description" content="Vibe App Store — 審核上架、社群把關、創作者帳號與數據，亞洲中文 AI 工具目錄。">
   <title>Vibe App Store — AI 工具目錄</title>
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Vibe App Store — AI 工具目錄">
+  <meta property="og:description" content="審核上架、可檢舉處置、創作者帳號與數據。探索與分享由 AI 協作打造的工具。">
+  <meta property="og:url" content="https://vibe-app-store.onrender.com">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Vibe App Store — AI 工具目錄">
+  <meta name="twitter:description" content="審核上架、可檢舉處置、創作者帳號與數據。亞洲中文 AI 工具目錄。">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -15,8 +22,16 @@
     <div class="logo">⚡ vibe<span>.store</span></div>
     <div class="header-right">
       <div class="points-wrap">
-        <div class="points-pill" id="points-display"></div>
-        <div class="points-tooltip">虛擬體驗點數（僅供試玩）<br>免費工具不扣點，付費工具按標示扣除<br><em>此點數存在瀏覽器，不可轉移或兌換</em></div>
+        <button class="points-pill" id="points-display" aria-label="管理點數"></button>
+        <button class="topup-btn" id="topup-btn" title="領取點數">+</button>
+      </div>
+      <div id="auth-area" class="auth-area">
+        <button id="show-login-btn" class="auth-link">登入</button>
+        <button id="show-register-btn" class="auth-link accent">註冊</button>
+      </div>
+      <div id="user-area" class="auth-area hidden">
+        <span id="user-display-name" class="user-name"></span>
+        <button id="logout-btn" class="auth-link dim">登出</button>
       </div>
       <div class="header-meta" id="header-count"></div>
     </div>
@@ -44,7 +59,7 @@
   <div class="hero">
     <div class="hero-label">// 開放目錄</div>
     <h1>探索與分享<br><em>AI 打造的工具</em></h1>
-    <p>收錄由 AI 協作打造的工具。瀏覽、試用，或分享你自己的作品。</p>
+    <p>審核後上架 · 可檢舉與處置 · 創作者帳號與數據<br>亞洲中文社群的 AI 工具目錄 — 瀏覽、試用，或<a href="/for-creators.html" style="color:var(--accent2)">分享你的作品</a>。</p>
     <div class="search-wrap">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input type="text" id="search" placeholder="搜尋工具名稱、標籤..." autocomplete="off">
@@ -81,6 +96,7 @@
         </select>
       </div>
       <div class="sort-btns">
+        <button class="this-week-btn" id="this-week-btn">本週上新</button>
         <button class="sort-btn active" data-sort="newest">最新</button>
         <button class="sort-btn" data-sort="top">評分</button>
         <button class="sort-btn" data-sort="trending">熱門</button>
@@ -107,6 +123,16 @@
           提交後需經審核才會公開上架。請確認工具連結可正常使用且內容符合<a href="#" id="guidelines-link-submit">社群準則</a>。
         </div>
       </div>
+
+      <div id="submit-auth-gate" class="auth-gate">
+        <p>你需要先登入或註冊才能提交工具。</p>
+        <div class="auth-gate-actions">
+          <button class="submit-btn" id="gate-login-btn">登入</button>
+          <button class="submit-btn submit-btn-secondary" id="gate-register-btn">註冊帳號</button>
+        </div>
+      </div>
+
+      <div id="submit-form-wrap" class="hidden">
       <div id="flash" class="flash hidden"></div>
       <form id="submit-form">
         <div class="field">
@@ -121,10 +147,6 @@
         <div class="field">
           <label for="f-url">工具網址 <span class="required">*</span></label>
           <input type="url" id="f-url" placeholder="https://your-tool.vercel.app" required>
-        </div>
-        <div class="field">
-          <label for="f-creator">你的名稱 <span class="required">*</span></label>
-          <input type="text" id="f-creator" placeholder="你的名字或暱稱" required maxlength="40">
         </div>
         <div class="field-row">
           <div class="field">
@@ -148,6 +170,7 @@
         </div>
         <button type="submit" class="submit-btn">提交工具 →</button>
       </form>
+      </div>
     </div>
   </main>
 </div>
@@ -161,27 +184,34 @@
         <p>查看你的工具表現、管理已提交的工具，以及了解精選資格。</p>
       </div>
 
-      <!-- Lookup by name -->
+      <!-- Auth gate for studio -->
+      <div id="studio-auth-gate" class="auth-gate">
+        <p>登入後即可查看和管理你的工具。</p>
+        <div class="auth-gate-actions">
+          <button class="submit-btn" id="studio-gate-login-btn">登入</button>
+          <button class="submit-btn submit-btn-secondary" id="studio-gate-register-btn">註冊帳號</button>
+        </div>
+      </div>
+
+      <!-- Logged-in studio content -->
+      <div id="studio-content" class="hidden">
+        <div id="my-stats-area" class="creator-stats"></div>
+
+        <div class="section-header studio-section-gap">
+          <h2>我的工具</h2>
+        </div>
+        <div id="my-tools-list"></div>
+      </div>
+
+      <!-- Public lookup (always available) -->
+      <div class="section-header studio-section-gap" style="margin-top:2rem">
+        <h2>查詢其他創作者</h2>
+      </div>
       <div class="creator-lookup">
         <input type="text" id="creator-name-input" placeholder="輸入創作者名稱..." maxlength="40">
         <button id="creator-lookup-btn" class="submit-btn">查詢</button>
       </div>
-
       <div id="creator-stats" class="creator-stats hidden"></div>
-
-      <!-- Edit token tools management -->
-      <div id="my-tools-section" class="my-tools-section">
-        <div class="section-header studio-section-gap">
-          <h2>我的工具（以密鑰管理）</h2>
-        </div>
-        <p class="hint-text">提交工具時會獲得一組編輯密鑰，輸入密鑰即可編輯或刪除對應工具。</p>
-        <div class="token-lookup">
-          <input type="text" id="edit-token-input" placeholder="貼上你的編輯密鑰..." maxlength="64">
-          <input type="number" id="edit-tool-id-input" placeholder="工具 ID" min="1" class="token-id-input">
-          <button id="token-lookup-btn" class="submit-btn">載入</button>
-        </div>
-        <div id="edit-tool-panel" class="edit-tool-panel hidden"></div>
-      </div>
 
       <!-- Featured eligibility info -->
       <div class="eligibility-info">
@@ -321,6 +351,68 @@
         <h3>點數說明</h3>
         <p>本站的「體驗點數」為 <strong>虛擬點數</strong>，僅作為遊戲化體驗用途，<strong>不可兌換現金、不可轉移</strong>，且儲存在您的瀏覽器中。創作者儀表板中的「收益」數字反映的是工具受歡迎程度的指標，而非實際收入。</p>
       </section>
+      <section>
+        <p>更完整的規則與營運數據，請參閱<a href="/transparency.html">透明度中心</a>。</p>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ── Top-up modal ────────────────────────────────────── -->
+<div id="topup-modal" class="modal hidden">
+  <div class="topup-backdrop"></div>
+  <div class="topup-box">
+    <div class="topup-header">
+      <h3>點數管理</h3>
+      <button class="modal-close" id="topup-close">✕</button>
+    </div>
+    <div class="topup-body">
+      <div id="topup-alert" class="topup-alert hidden"></div>
+      <div class="topup-balance-row">
+        <span class="topup-balance-label">目前餘額</span>
+        <span class="topup-balance-value" id="topup-balance">0 點</span>
+      </div>
+      <div class="topup-divider"></div>
+      <div class="topup-option">
+        <div class="topup-option-info">
+          <div class="topup-option-title">每日免費領取</div>
+          <div class="topup-option-desc">每 24 小時可領一次，免費獲得 <strong>50 點</strong>體驗點數</div>
+          <div class="topup-cooldown" id="topup-cooldown"></div>
+        </div>
+        <button id="daily-claim-btn" class="submit-btn topup-claim-btn">領取 50 點</button>
+      </div>
+      <p class="topup-note">體驗點數僅供試玩，儲存在瀏覽器，不可兌換或轉移。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── Auth modal (login / register) ──────────────────── -->
+<div id="auth-modal" class="modal hidden">
+  <div class="auth-modal-backdrop"></div>
+  <div class="auth-modal-box">
+    <div class="auth-modal-header">
+      <h3 id="auth-modal-title">登入</h3>
+      <button class="modal-close" id="auth-modal-close">✕</button>
+    </div>
+    <form id="auth-form">
+      <div id="auth-name-field" class="field hidden">
+        <label for="auth-name">顯示名稱</label>
+        <input type="text" id="auth-name" placeholder="你的暱稱" maxlength="40">
+      </div>
+      <div class="field">
+        <label for="auth-email">Email</label>
+        <input type="email" id="auth-email" placeholder="you@example.com" required>
+      </div>
+      <div class="field">
+        <label for="auth-password">密碼</label>
+        <input type="password" id="auth-password" placeholder="至少 6 個字元" required minlength="6">
+      </div>
+      <div id="auth-error" class="auth-error hidden"></div>
+      <button type="submit" class="submit-btn" id="auth-submit-btn">登入</button>
+    </form>
+    <div class="auth-switch">
+      <span id="auth-switch-text">還沒有帳號？</span>
+      <button id="auth-switch-btn" class="auth-link">註冊</button>
     </div>
   </div>
 </div>
@@ -330,14 +422,25 @@
 
 <footer>
   <div class="footer-inner">
-    <span>用 AI 協作打造 · 開放原始碼 · 不需要帳號</span>
+    <span>用 AI 協作打造 · 開放原始碼</span>
     <div class="footer-links">
       <a href="#" id="guidelines-link">社群準則</a>
       <span class="footer-sep">·</span>
-      <a href="#" id="privacy-link">隱私與條款</a>
+      <a href="/transparency.html">透明度中心</a>
+      <span class="footer-sep">·</span>
+      <a href="/privacy.html">隱私權政策</a>
+      <span class="footer-sep">·</span>
+      <a href="/terms.html">使用條款</a>
+      <span class="footer-sep">·</span>
+      <a href="/for-creators.html">創作者招募</a>
     </div>
   </div>
 </footer>
+
+<div id="cookie-banner" class="cookie-banner hidden">
+  本站使用必要性 Cookie（httpOnly JWT）維持登入狀態，不使用追蹤型 Cookie。詳見<a href="/privacy.html">隱私權政策</a>。
+  <button id="cookie-accept">我知道了</button>
+</div>
 
 <script src="/app.js"></script>
 </body>

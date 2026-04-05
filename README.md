@@ -1,6 +1,6 @@
 # ⚡ Vibe App Store
 
-> 探索、評分與討論由 **AI 協作打造**的小工具 — 亞洲社群的開放目錄，無需帳號即可使用。
+> 探索、評分與討論由 **AI 協作打造**的小工具 — 亞洲社群的開放目錄。創作者以 Email 註冊帳號後即可投稿工具。
 
 **線上網址（完整版）：** https://vibe-app-store.onrender.com  
 **GitHub Pages（靜態預覽）：** [jerry200176-png.github.io/vibe-app-store](https://jerry200176-png.github.io/vibe-app-store/)
@@ -134,9 +134,11 @@ npm start      # 正式模式（無 watch）
 |------|--------|------|
 | `PORT` | `3000` | HTTP 監聽埠 |
 | `DB_PATH` | `data/appstore.db` | SQLite 資料庫檔案路徑（相對於專案根目錄） |
-| `NODE_ENV` | 未設定 | 設為 `production` 時：啟用 `trust proxy`（反向代理後限流才對「真實客戶 IP」生效）、隱藏 500 錯誤細節 |
+| `NODE_ENV` | 未設定 | 設為 `production` 時：啟用 `trust proxy`（反向代理後限流才對「真實客戶 IP」生效）、隱藏 500 錯誤細節、cookie 設為 Secure |
+| `JWT_SECRET` | `dev-secret-change-in-production` | JWT 簽發密鑰，**生產環境必須設定為隨機字串** |
+| `ADMIN_KEY` | 未設定 | 管理員 API 認證密鑰 |
 
-可建立 `.env` 檔案（已在 `.gitignore` 中）或直接於 Render 的環境變數設定。
+可建立 `.env` 檔案（已在 `.gitignore` 中）或直接於 Render 的環境變數設定。`render.yaml` 已設定 `JWT_SECRET` 和 `ADMIN_KEY` 為自動產生。
 
 ### 安全性（精簡）
 
@@ -171,6 +173,7 @@ npm start      # 正式模式（無 watch）
 | `sort` | `newest` \| `top` \| `trending` | `newest` | 排序方式 |
 | `tag` | 任意字串 | — | 依標籤篩選 |
 | `creator` | 任意字串 | — | 依創作者名稱篩選（不分大小寫） |
+| `since_days` | `1`–`90` | — | 僅回傳最近 N 天內建立的工具 |
 
 **回應範例：**
 
@@ -196,9 +199,9 @@ npm start      # 正式模式（無 watch）
 ]
 ```
 
-#### `POST /api/tools`
+#### `POST /api/tools`（需登入）
 
-新增工具。
+新增工具。需要帶有效的 JWT cookie（透過 `/api/auth/login` 或 `/api/auth/register` 取得）。工具的 `creator_name` 自動設為登入使用者的 `display_name`，`owner_user_id` 自動綁定。新工具狀態為 `pending`，需管理員審核通過才會公開。
 
 **Request body：**
 
@@ -207,14 +210,25 @@ npm start      # 正式模式（無 watch）
   "title": "工具名稱",
   "desc": "工具描述",
   "url": "https://your-tool.example.com",
-  "creator_name": "你的名字",
   "cost": 10,
   "tags": ["ai", "生產力"],
   "lang": "中文"
 }
 ```
 
-驗證規則：`title`、`desc`、`url`、`creator_name` 為必填；`url` 必須是 `http://` 或 `https://` 開頭；`cost` 為 0–100 整數（0 = 免費）；`tags` 最多 5 個；`desc` 最多 300 字元。不接受 `is_featured`（僅能由後端設定）。
+驗證規則：`title`、`desc`、`url` 為必填；`url` 必須是 `http://` 或 `https://` 開頭；`cost` 為 0–100 整數（0 = 免費）；`tags` 最多 5 個；`desc` 最多 300 字元。
+
+#### `PUT /api/tools/:id`（需登入或 edit_token）
+
+更新工具。需為工具擁有者（`owner_user_id` 匹配）或持有舊版 `x-edit-token` 標頭。
+
+#### `DELETE /api/tools/:id`（需登入或 edit_token）
+
+刪除工具（軟刪除，設為 `removed` 狀態）。權限邏輯同 PUT。
+
+#### `GET /api/tools/me`（需登入）
+
+列出登入使用者的所有工具（含 `pending`），供創作者工作室使用。
 
 #### `POST /api/tools/:id/use`
 
@@ -224,11 +238,41 @@ npm start      # 正式模式（無 watch）
 
 ---
 
+### 認證
+
+#### `POST /api/auth/register`
+
+註冊新帳號。回應設定 httpOnly JWT cookie。
+
+```json
+{ "email": "user@example.com", "password": "至少6字", "display_name": "暱稱" }
+```
+
+#### `POST /api/auth/login`
+
+登入。回應設定 httpOnly JWT cookie。
+
+```json
+{ "email": "user@example.com", "password": "密碼" }
+```
+
+#### `POST /api/auth/logout`
+
+清除 JWT cookie。
+
+#### `GET /api/auth/me`
+
+回傳目前登入使用者資訊 `{ id, email, display_name, created_at }`，未登入回 401。
+
 ### 創作者
 
 #### `GET /api/creators/stats?name=Alice`
 
-查詢指定創作者的工具列表及總收益。回傳 `creator_name`、`tools`（含各工具 `usage_count`、`points_earned`）、`total_uses`、`total_points_earned`。
+查詢指定創作者的工具列表及總收益（公開端點）。回傳 `creator_name`、`tools`（含各工具 `usage_count`、`points_earned`）、`total_uses`、`total_points_earned`。
+
+#### `GET /api/creators/me`（需登入）
+
+查詢目前登入使用者的創作者統計，依 `owner_user_id` 聚合，不需輸入名稱。
 
 ---
 
@@ -266,6 +310,20 @@ npm start      # 正式模式（無 watch）
 
 ---
 
+### 透明度
+
+#### `GET /api/transparency/summary`
+
+公開唯讀端點，回傳平台營運概況。供透明度中心頁面使用。
+
+**回應範例：**
+
+```json
+{ "active_tools": 12, "pending_tools": 3, "pending_reports": 1, "total_violations": 5 }
+```
+
+---
+
 ## 部署
 
 ### Render.com（推薦，免費方案）
@@ -297,8 +355,31 @@ git push
 
 - **POST**：`POST /api/*` 每 IP 每 15 分鐘 60 次，超過回傳 `429`。
 - **GET**：其餘 `GET /api/*` 每 IP 每 15 分鐘 400 次；`GET /api/health` 除外。
+- **登入/註冊**：`POST /api/auth/register` 和 `POST /api/auth/login` 額外套用更嚴格限流（每 15 分鐘 15 次/IP），防止撞庫攻擊。
 
 部署於 Render 等反向代理時請設定 **`NODE_ENV=production`**，伺服器才會啟用 `trust proxy`，限流才會依**客戶端 IP** 計算（否則可能全部算成同一個內網 IP）。此設定為基本防護，不取代正式認證機制。
+
+---
+
+## 營運與種子內容
+
+### 邀請第一批創作者
+
+1. 在你的社群（Discord、Facebook 社團、LINE 群等）分享 `/for-creators.html` 招募頁。
+2. 親自邀請 3–5 位信任的 AI 工具作者，請他們註冊並投稿。初期工具品質比數量重要。
+3. 作為管理員，在 Admin 後台及時審核新投稿，縮短等待時間讓創作者有好體驗。
+
+### 投稿檢查清單（給審核者）
+
+- 工具連結使用 HTTPS 且可正常開啟
+- 描述誠實反映工具功能，不誇大
+- 不含惡意軟體、釣魚、仇恨或成人內容
+- 標籤準確、語言標示正確
+- 同一工具未重複提交
+
+### 精選標記
+
+符合精選資格（無違規、有評分、連結有效）的工具，管理員可在資料庫中設定 `is_featured = 1`。目前無自動精選機制，需人工判斷。
 
 ---
 

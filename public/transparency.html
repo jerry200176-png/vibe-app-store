@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Vibe App Store 透明度中心 — 審核流程、檢舉處置、營運數據公開。">
+  <title>透明度中心 — Vibe App Store</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <a href="/" class="logo" style="text-decoration:none">⚡ vibe<span>.store</span></a>
+  </div>
+</header>
+
+<div class="static-page">
+  <div class="static-hero">
+    <div class="hero-label">// 透明度中心</div>
+    <h1>規則公開、數據透明</h1>
+    <p>我們相信平台的信任來自於規則清晰、資訊對等。以下說明 Vibe App Store 如何審核、處置與營運。</p>
+  </div>
+
+  <main class="static-body">
+    <section>
+      <h2>營運快照</h2>
+      <p class="hint-text">以下數字由伺服器即時統計，每次載入本頁時更新。</p>
+      <div id="transparency-stats" class="stats-summary">
+        <div class="stat-item"><span class="stat-value" id="ts-active">-</span><span class="stat-label">上架中工具</span></div>
+        <div class="stat-item"><span class="stat-value" id="ts-pending">-</span><span class="stat-label">審核中工具</span></div>
+        <div class="stat-item"><span class="stat-value" id="ts-reports">-</span><span class="stat-label">待處理檢舉</span></div>
+        <div class="stat-item"><span class="stat-value" id="ts-violations">-</span><span class="stat-label">累計違規處置</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>工具審核流程</h2>
+      <p>所有新提交的工具狀態為「待審核」，不會出現在公開列表中。管理員依以下標準審核：</p>
+      <ul class="check-list">
+        <li>連結是否可正常開啟（非 404、非釣魚頁面）</li>
+        <li>描述是否與實際工具功能相符</li>
+        <li>內容是否符合社群準則（見下方）</li>
+      </ul>
+      <p>審核通過後狀態變為「上架中」，工具出現在首頁列表與搜尋結果。</p>
+    </section>
+
+    <section>
+      <h2>社群準則</h2>
+      <p>以下內容禁止出現在 Vibe App Store：</p>
+      <ul>
+        <li><strong>惡意軟體與釣魚</strong> — 含病毒、木馬或竊取資料的工具連結。</li>
+        <li><strong>冒充</strong> — 假冒他人身分提交工具或留言。</li>
+        <li><strong>仇恨與違法內容</strong> — 含仇恨言論、歧視、暴力或違法內容。</li>
+        <li><strong>垃圾內容</strong> — 重複提交、廣告性質留言。</li>
+        <li><strong>成人內容</strong> — 色情或不適合所有年齡的內容。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>檢舉與處置</h2>
+      <p>任何人都可以在工具卡片或留言上點擊「⚑」按鈕送出檢舉。管理員收到後會審核並做出以下其中一項處置：</p>
+      <ul>
+        <li><strong>已解決</strong> — 確認違規，工具被下架或留言被移除。</li>
+        <li><strong>已駁回</strong> — 經確認不構成違規，維持原狀。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>違規累積（Strike 機制）</h2>
+      <p>每次工具因違規被下架或拒絕上架，對應創作者累積一次 Strike。累積到 <strong>3 次 Strikes</strong>，該創作者所有工具將被自動下架。此機制效法主流平台的「重複違規加重」原則。</p>
+    </section>
+
+    <section>
+      <h2>外部連結與 iframe 風險</h2>
+      <p>Vibe App Store 收錄的工具均為第三方網站。我們會盡力透過審核篩選，但無法保證每個工具的安全性、可用性或隱私政策。</p>
+      <p>預覽功能透過 iframe 嵌入外部網站，該網站可能會記錄您的造訪。您可以選擇「在新分頁開啟」來代替預覽。</p>
+    </section>
+
+    <section>
+      <h2>帳號與資料</h2>
+      <p>創作者以 Email 與密碼註冊帳號。密碼經 bcrypt 雜湊後儲存，伺服器不保存明文。登入狀態以 httpOnly JWT Cookie 維持。詳見<a href="/privacy.html">隱私權政策</a>。</p>
+    </section>
+
+    <section>
+      <h2>點數說明</h2>
+      <p>本站的「體驗點數」為<strong>虛擬點數</strong>，僅作為遊戲化體驗用途，<strong>不可兌換現金、不可轉移</strong>，且儲存在瀏覽器的 localStorage 中。創作者工作室中的「人氣指數」反映工具受歡迎程度，而非實際收入。</p>
+    </section>
+  </main>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <span>用 AI 協作打造 · 開放原始碼</span>
+    <div class="footer-links">
+      <a href="/">首頁</a>
+      <span class="footer-sep">·</span>
+      <a href="/for-creators.html">創作者招募</a>
+      <span class="footer-sep">·</span>
+      <a href="/privacy.html">隱私權政策</a>
+      <span class="footer-sep">·</span>
+      <a href="/terms.html">使用條款</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(async () => {
+  try {
+    const r = await fetch('/api/transparency/summary');
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('ts-active').textContent = d.active_tools;
+    document.getElementById('ts-pending').textContent = d.pending_tools;
+    document.getElementById('ts-reports').textContent = d.pending_reports;
+    document.getElementById('ts-violations').textContent = d.total_violations;
+  } catch { /* graceful degradation: keep "-" */ }
+})();
+</script>
+</body>
+</html>

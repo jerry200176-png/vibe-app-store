@@ -2,6 +2,7 @@ const express   = require('express');
 const router    = express.Router();
 const { getDb, generateEditToken, hashToken } = require('../db');
 const { sendServerError } = require('../util/httpError');
+const { requireUser, optionalUser } = require('../middleware/auth');
 
 const BASE_AGG = `
   SELECT t.id, t.title, t.desc, t.url, t.tags, t.lang, t.created_at,
@@ -44,7 +45,7 @@ router.get('/', async (req, res) => {
     const db = await getDb();
     const sortRaw = req.query.sort;
     const sort = SORT_MODES[sortRaw] ? sortRaw : 'newest';
-    const { tag, creator } = req.query;
+    const { tag, creator, since_days } = req.query;
     const where = [`t.status = 'active'`];
     const args  = [];
 
@@ -58,6 +59,11 @@ router.get('/', async (req, res) => {
     if (creator && String(creator).trim()) {
       where.push(`LOWER(t.creator_name) = ?`);
       args.push(String(creator).trim().toLowerCase().slice(0, 100));
+    }
+    if (since_days) {
+      const days = Math.min(Math.max(parseInt(since_days, 10) || 0, 1), 90);
+      where.push(`t.created_at >= unixepoch() - (? * 86400)`);
+      args.push(days);
     }
 
     let sql = BASE_AGG;
@@ -116,14 +122,15 @@ router.post('/:id/use', async (req, res) => {
   } catch (e) { sendServerError(res, e); }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requireUser, async (req, res) => {
   try {
     const db = await getDb();
-    const { title, desc, url, tags = [], lang = '中文', creator_name, cost } = req.body || {};
+    const user = await db.get('SELECT id, display_name FROM users WHERE id = ?', [req.user.id]);
+    if (!user) return res.status(401).json({ error: '使用者不存在' });
+
+    const { title, desc, url, tags = [], lang = '中文', cost } = req.body || {};
     if (!title?.trim() || !desc?.trim() || !url?.trim())
       return res.status(400).json({ error: '名稱、描述、網址為必填' });
-    if (!creator_name?.trim())
-      return res.status(400).json({ error: '創作者名稱為必填' });
     try {
       const u = new URL(url.trim());
       if (!['http:', 'https:'].includes(u.protocol)) throw new Error();
@@ -133,35 +140,41 @@ router.post('/', async (req, res) => {
       .map(t => t.trim()).filter(Boolean).slice(0, 5);
     const safeCost = Math.max(0, Math.min(100, parseInt(cost, 10) || 0));
 
-    const { token, hash } = generateEditToken();
-
     const { lastID } = await db.run(
-      `INSERT INTO tools (title, desc, url, tags, lang, creator_name, cost, status, edit_token_hash)
+      `INSERT INTO tools (title, desc, url, tags, lang, creator_name, cost, status, owner_user_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
       [title.trim().slice(0,80), desc.trim().slice(0,300), url.trim(),
        JSON.stringify(cleanTags), String(lang).trim().slice(0,20),
-       creator_name.trim().slice(0,40), safeCost, hash]
+       user.display_name.slice(0,40), safeCost, user.id]
     );
     const tool = await db.get(`${BASE_AGG} WHERE t.id = ? GROUP BY t.id`, [lastID]);
-    const parsed = parse(tool);
-    parsed.edit_token = token;
-    res.status(201).json(parsed);
+    res.status(201).json(parse(tool));
   } catch (e) { sendServerError(res, e); }
 });
 
-/* ── Edit tool (requires edit_token) ──────────────────── */
-router.put('/:id', async (req, res) => {
+/* ── Ownership check: logged-in owner OR legacy edit_token ── */
+async function verifyOwnership(req, res) {
+  const db     = await getDb();
+  const toolId = Number(req.params.id);
+  const tool   = await db.get('SELECT id, owner_user_id, edit_token_hash FROM tools WHERE id = ?', [toolId]);
+  if (!tool) { res.status(404).json({ error: '找不到此工具' }); return null; }
+
+  if (req.user && tool.owner_user_id && req.user.id === tool.owner_user_id) return tool;
+
+  const token = req.headers['x-edit-token'];
+  if (token && tool.edit_token_hash && tool.edit_token_hash === hashToken(token)) return tool;
+
+  res.status(403).json({ error: '你沒有權限編輯此工具' });
+  return null;
+}
+
+/* ── Edit tool ───────────────────────────────────────────── */
+router.put('/:id', optionalUser, async (req, res) => {
   try {
-    const db     = await getDb();
-    const toolId = Number(req.params.id);
-    const token  = req.headers['x-edit-token'];
-    if (!token) return res.status(401).json({ error: '需要編輯密鑰' });
+    const tool = await verifyOwnership(req, res);
+    if (!tool) return;
 
-    const tool = await db.get('SELECT id, edit_token_hash FROM tools WHERE id = ?', [toolId]);
-    if (!tool) return res.status(404).json({ error: '找不到此工具' });
-    if (tool.edit_token_hash !== hashToken(token))
-      return res.status(403).json({ error: '編輯密鑰不正確' });
-
+    const db = await getDb();
     const { title, desc, url, tags, lang, cost } = req.body || {};
     const sets = [];
     const args = [];
@@ -188,29 +201,35 @@ router.put('/:id', async (req, res) => {
     if (sets.length === 0)
       return res.status(400).json({ error: '未提供任何更新欄位' });
 
-    args.push(toolId);
+    args.push(tool.id);
     await db.run(`UPDATE tools SET ${sets.join(', ')} WHERE id = ?`, args);
 
-    const updated = await db.get(`${BASE_AGG} WHERE t.id = ? GROUP BY t.id`, [toolId]);
+    const updated = await db.get(`${BASE_AGG} WHERE t.id = ? GROUP BY t.id`, [tool.id]);
     res.json(parse(updated));
   } catch (e) { sendServerError(res, e); }
 });
 
-/* ── Delete tool (requires edit_token) ────────────────── */
-router.delete('/:id', async (req, res) => {
+/* ── Delete tool ─────────────────────────────────────────── */
+router.delete('/:id', optionalUser, async (req, res) => {
   try {
-    const db     = await getDb();
-    const toolId = Number(req.params.id);
-    const token  = req.headers['x-edit-token'];
-    if (!token) return res.status(401).json({ error: '需要編輯密鑰' });
+    const tool = await verifyOwnership(req, res);
+    if (!tool) return;
 
-    const tool = await db.get('SELECT id, edit_token_hash FROM tools WHERE id = ?', [toolId]);
-    if (!tool) return res.status(404).json({ error: '找不到此工具' });
-    if (tool.edit_token_hash !== hashToken(token))
-      return res.status(403).json({ error: '編輯密鑰不正確' });
-
-    await db.run(`UPDATE tools SET status = 'removed' WHERE id = ?`, [toolId]);
+    const db = await getDb();
+    await db.run(`UPDATE tools SET status = 'removed' WHERE id = ?`, [tool.id]);
     res.json({ message: '工具已刪除' });
+  } catch (e) { sendServerError(res, e); }
+});
+
+/* ── My tools (logged-in user) ────────────────────────────── */
+router.get('/me', requireUser, async (req, res) => {
+  try {
+    const db   = await getDb();
+    const rows = await db.all(
+      `${BASE_AGG} WHERE t.owner_user_id = ? GROUP BY t.id ORDER BY t.created_at DESC`,
+      [req.user.id]
+    );
+    res.json(rows.map(parse));
   } catch (e) { sendServerError(res, e); }
 });
 

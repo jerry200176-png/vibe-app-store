@@ -5,6 +5,8 @@ let activeSort    = 'newest';
 let activeCreator = '';
 let searchQuery   = '';
 let sheetToolId   = null;
+let currentUser   = null;
+let sinceDays     = 0;
 
 const DEFAULT_POINTS = 100;
 
@@ -29,11 +31,63 @@ function refreshPointsUI() {
   if (el) el.textContent = `${getPoints()} 點`;
 }
 
-/* ── Edit token store ───────────────────────────────────── */
-function getEditTokens() { return JSON.parse(localStorage.getItem('edit_tokens') || '{}'); }
-function saveEditToken(toolId, token) {
-  const m = getEditTokens(); m[toolId] = token; localStorage.setItem('edit_tokens', JSON.stringify(m));
+/* ── Daily claim ────────────────────────────────────────── */
+const DAILY_CLAIM_AMOUNT   = 50;
+const DAILY_CLAIM_COOLDOWN = 24 * 60 * 60 * 1000;
+
+function getLastDailyClaim() { return parseInt(localStorage.getItem('last_daily_claim') || '0', 10); }
+function setLastDailyClaim(ts) { localStorage.setItem('last_daily_claim', String(ts)); }
+function canDailyClaim() { return Date.now() - getLastDailyClaim() >= DAILY_CLAIM_COOLDOWN; }
+function timeUntilClaim() {
+  const ms = DAILY_CLAIM_COOLDOWN - (Date.now() - getLastDailyClaim());
+  const h  = Math.floor(ms / 3600000);
+  const m  = Math.floor((ms % 3600000) / 60000);
+  return `${h} 小時 ${m} 分後可再領`;
 }
+
+/* ── Top-up modal ───────────────────────────────────────── */
+function openTopupModal(alertMsg) {
+  document.getElementById('topup-modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  const alertEl = document.getElementById('topup-alert');
+  if (alertMsg) {
+    alertEl.textContent = alertMsg;
+    alertEl.classList.remove('hidden');
+  } else {
+    alertEl.classList.add('hidden');
+  }
+  syncTopupModal();
+}
+function closeTopupModal() {
+  document.getElementById('topup-modal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+function syncTopupModal() {
+  const balEl    = document.getElementById('topup-balance');
+  const claimBtn = document.getElementById('daily-claim-btn');
+  const coolEl   = document.getElementById('topup-cooldown');
+  if (balEl) balEl.textContent = `${getPoints()} 點`;
+  if (canDailyClaim()) {
+    claimBtn.disabled = false;
+    claimBtn.textContent = `領取 ${DAILY_CLAIM_AMOUNT} 點`;
+    coolEl.textContent = '';
+  } else {
+    claimBtn.disabled = true;
+    claimBtn.textContent = '今日已領取';
+    coolEl.textContent = timeUntilClaim();
+  }
+}
+
+document.getElementById('topup-close').addEventListener('click', closeTopupModal);
+document.querySelector('.topup-backdrop').addEventListener('click', closeTopupModal);
+document.getElementById('points-display').addEventListener('click', () => openTopupModal());
+document.getElementById('topup-btn').addEventListener('click', () => openTopupModal());
+document.getElementById('daily-claim-btn').addEventListener('click', () => {
+  if (!canDailyClaim()) return;
+  setPoints(getPoints() + DAILY_CLAIM_AMOUNT);
+  setLastDailyClaim(Date.now());
+  syncTopupModal();
+});
 
 /* ── Follow helpers ─────────────────────────────────────── */
 function getFollowed() { return JSON.parse(localStorage.getItem('followed_creators') || '[]'); }
@@ -61,11 +115,209 @@ function timeAgo(ts) {
   return Math.floor(diff / 86400) + ' 天前';
 }
 
+function toolShareUrl(toolId) {
+  return `${location.origin}?tool=${toolId}`;
+}
+async function shareTool(toolId, title) {
+  const url = toolShareUrl(toolId);
+  if (navigator.share) {
+    try { await navigator.share({ title, url }); return; } catch { /* cancelled */ }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    showShareToast();
+  } catch { prompt('複製此連結：', url); }
+}
+function showShareToast() {
+  let toast = document.getElementById('share-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'share-toast';
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface2);color:var(--accent);border:1px solid var(--accent);border-radius:var(--radius);padding:8px 20px;font-size:13px;z-index:500;opacity:0;transition:opacity .3s';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = '連結已複製！';
+  toast.style.opacity = '1';
+  setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+}
+
 /* ── API calls ──────────────────────────────────────────── */
 async function apiFetch(path, opts = {}) {
-  const res = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  const res = await fetch(path, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.statusText); }
   return res.json();
+}
+
+/* ── Auth UI ────────────────────────────────────────────── */
+function updateAuthUI() {
+  const authArea = document.getElementById('auth-area');
+  const userArea = document.getElementById('user-area');
+  const submitGate = document.getElementById('submit-auth-gate');
+  const submitForm = document.getElementById('submit-form-wrap');
+  const studioGate = document.getElementById('studio-auth-gate');
+  const studioContent = document.getElementById('studio-content');
+
+  if (currentUser) {
+    authArea.classList.add('hidden');
+    userArea.classList.remove('hidden');
+    document.getElementById('user-display-name').textContent = currentUser.display_name;
+    submitGate.classList.add('hidden');
+    submitForm.classList.remove('hidden');
+    studioGate.classList.add('hidden');
+    studioContent.classList.remove('hidden');
+  } else {
+    authArea.classList.remove('hidden');
+    userArea.classList.add('hidden');
+    submitGate.classList.remove('hidden');
+    submitForm.classList.add('hidden');
+    studioGate.classList.remove('hidden');
+    studioContent.classList.add('hidden');
+  }
+}
+
+let authMode = 'login';
+function openAuthModal(mode) {
+  authMode = mode;
+  const title    = document.getElementById('auth-modal-title');
+  const nameField = document.getElementById('auth-name-field');
+  const submitBtn = document.getElementById('auth-submit-btn');
+  const switchText = document.getElementById('auth-switch-text');
+  const switchBtn  = document.getElementById('auth-switch-btn');
+  const errorEl    = document.getElementById('auth-error');
+  errorEl.classList.add('hidden');
+
+  if (mode === 'register') {
+    title.textContent = '註冊';
+    nameField.classList.remove('hidden');
+    submitBtn.textContent = '註冊';
+    switchText.textContent = '已經有帳號？';
+    switchBtn.textContent = '登入';
+  } else {
+    title.textContent = '登入';
+    nameField.classList.add('hidden');
+    submitBtn.textContent = '登入';
+    switchText.textContent = '還沒有帳號？';
+    switchBtn.textContent = '註冊';
+  }
+  document.getElementById('auth-modal').classList.remove('hidden');
+}
+
+function closeAuthModal() {
+  document.getElementById('auth-modal').classList.add('hidden');
+  document.getElementById('auth-form').reset();
+  document.getElementById('auth-error').classList.add('hidden');
+}
+
+document.getElementById('auth-modal-close').addEventListener('click', closeAuthModal);
+document.querySelector('.auth-modal-backdrop').addEventListener('click', closeAuthModal);
+document.getElementById('auth-switch-btn').addEventListener('click', () => {
+  openAuthModal(authMode === 'login' ? 'register' : 'login');
+});
+
+document.getElementById('show-login-btn').addEventListener('click', () => openAuthModal('login'));
+document.getElementById('show-register-btn').addEventListener('click', () => openAuthModal('register'));
+document.getElementById('gate-login-btn').addEventListener('click', () => openAuthModal('login'));
+document.getElementById('gate-register-btn').addEventListener('click', () => openAuthModal('register'));
+document.getElementById('studio-gate-login-btn').addEventListener('click', () => openAuthModal('login'));
+document.getElementById('studio-gate-register-btn').addEventListener('click', () => openAuthModal('register'));
+
+document.getElementById('auth-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const errorEl = document.getElementById('auth-error');
+  const btn = document.getElementById('auth-submit-btn');
+  errorEl.classList.add('hidden');
+  btn.disabled = true;
+  try {
+    const email    = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    if (authMode === 'register') {
+      const display_name = document.getElementById('auth-name').value.trim();
+      currentUser = await apiFetch('/api/auth/register', {
+        method: 'POST', body: JSON.stringify({ email, password, display_name }),
+      });
+    } else {
+      currentUser = await apiFetch('/api/auth/login', {
+        method: 'POST', body: JSON.stringify({ email, password }),
+      });
+    }
+    closeAuthModal();
+    updateAuthUI();
+    loadMyStudio();
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.classList.remove('hidden');
+  } finally { btn.disabled = false; }
+});
+
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  await apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+  currentUser = null;
+  updateAuthUI();
+});
+
+async function checkAuth() {
+  try {
+    currentUser = await apiFetch('/api/auth/me');
+  } catch { currentUser = null; }
+  updateAuthUI();
+}
+
+/* ── Studio: my tools + my stats ───────────────────────── */
+async function loadMyStudio() {
+  if (!currentUser) return;
+  const statsArea = document.getElementById('my-stats-area');
+  const toolsList = document.getElementById('my-tools-list');
+
+  try {
+    const [myTools, statsData] = await Promise.all([
+      apiFetch('/api/tools/me'),
+      apiFetch('/api/creators/me').catch(() => null),
+    ]);
+
+    if (statsData) {
+      const eligBadge = statsData.featured_eligible
+        ? '<span class="eligibility-badge eligible">符合精選資格</span>'
+        : '<span class="eligibility-badge not-eligible">尚未符合精選資格</span>';
+      const strikeHtml = statsData.strikes > 0
+        ? `<div class="strike-info"><span class="strike-count">${statsData.strikes} 次違規</span></div>`
+        : `<div class="strike-info"><span class="strike-ok">無違規紀錄</span></div>`;
+      statsArea.innerHTML = `
+        <div class="stats-summary">
+          <div class="stat-item"><span class="stat-value">${statsData.total_uses}</span><span class="stat-label">總使用次數</span></div>
+          <div class="stat-item"><span class="stat-value">${statsData.total_points_earned}</span><span class="stat-label">人氣指數</span></div>
+          <div class="stat-item"><span class="stat-value">${statsData.tools.length}</span><span class="stat-label">工具數量</span></div>
+        </div>
+        ${strikeHtml}${eligBadge}`;
+    }
+
+    if (myTools.length === 0) {
+      toolsList.innerHTML = '<p class="hint-text">你還沒有提交任何工具。</p>';
+    } else {
+      toolsList.innerHTML = myTools.map(t => {
+        const statusLabel = t.status === 'active' ? '<span style="color:var(--accent)">上架中</span>'
+          : t.status === 'pending' ? '<span style="color:var(--gold)">審核中</span>'
+          : '<span style="color:var(--danger)">已下架</span>';
+        return `
+          <div class="my-tool-card" data-tool-id="${t.id}">
+            <div class="my-tool-info">
+              <h4>${esc(t.title)}</h4>
+              <div class="my-tool-meta">${statusLabel} · ${t.usage_count} 次使用 · ${t.avg_rating || 0} 星 (${t.rating_count || 0})</div>
+            </div>
+            <div class="my-tool-actions">
+              <button class="my-tool-share" data-id="${t.id}" data-title="${esc(t.title)}" title="複製宣傳連結">複製連結</button>
+              <button class="submit-btn my-edit-btn" data-id="${t.id}">編輯</button>
+              <button class="danger-btn my-delete-btn" data-id="${t.id}">刪除</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+  } catch (e) {
+    toolsList.innerHTML = `<p class="error-text">${esc(e.message)}</p>`;
+  }
 }
 
 /* ── Skeleton loading ───────────────────────────────────── */
@@ -89,6 +341,7 @@ async function loadTools() {
   const params = new URLSearchParams({ sort: activeSort });
   if (activeTag)     params.set('tag', activeTag);
   if (activeCreator) params.set('creator', activeCreator);
+  if (sinceDays > 0) params.set('since_days', sinceDays);
   allTools = await apiFetch(`/api/tools?${params}`);
   renderAll();
 }
@@ -156,6 +409,12 @@ function starsHtml(toolId, avgRating, ratingCount) {
 }
 
 /* ── Card HTML ──────────────────────────────────────────── */
+function isNewFromFollowed(t) {
+  if (!isFollowing(t.creator_name)) return false;
+  const sevenDaysAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
+  return t.created_at >= sevenDaysAgo;
+}
+
 function cardHtml(t) {
   const costLabel = t.cost > 0
     ? `<button class="use-btn use-btn-paid preview-btn" data-id="${t.id}" data-url="${esc(t.url)}" data-title="${esc(t.title)}" data-cost="${t.cost}">使用（${t.cost} 點）</button>`
@@ -164,6 +423,7 @@ function cardHtml(t) {
   const followed = isFollowing(t.creator_name);
   const followCls = followed ? ' following' : '';
   const followLabel = followed ? '已追蹤' : '+ 追蹤';
+  const newBadge = isNewFromFollowed(t) ? '<span class="badge badge-new">新</span>' : '';
 
   return `
     <article class="card${t.is_featured ? ' card-featured' : ''}" data-id="${t.id}">
@@ -173,6 +433,7 @@ function cardHtml(t) {
           <div class="card-title">
             ${esc(t.title)}
             ${badgesHtml(t.badges)}
+            ${newBadge}
           </div>
           ${t.cost > 0 ? `<span class="cost-chip">${t.cost} 點</span>` : `<span class="cost-chip free">免費</span>`}
         </div>
@@ -193,6 +454,7 @@ function cardHtml(t) {
           <button class="comment-toggle" data-id="${t.id}" data-title="${esc(t.title)}">
             💬 ${t.comment_count} 則留言
           </button>
+          <button class="share-btn" data-id="${t.id}" data-title="${esc(t.title)}" title="分享連結">🔗</button>
           <button class="report-btn" data-type="tool" data-target="${t.id}" title="檢舉此工具">⚑</button>
         </div>
         ${costLabel}
@@ -264,7 +526,7 @@ async function useTool(toolId, url, title, cost) {
   if (cost > 0) {
     const balance = getPoints();
     if (balance < cost) {
-      alert(`點數不足！需要 ${cost} 點，目前剩餘 ${balance} 點。`);
+      openTopupModal(`點數不足！「${title}」需要 ${cost} 點，目前剩餘 ${balance} 點。`);
       return;
     }
     setPoints(balance - cost);
@@ -407,7 +669,6 @@ function closeGuidelines() {
 document.getElementById('guidelines-close').addEventListener('click', closeGuidelines);
 document.querySelector('.guidelines-backdrop').addEventListener('click', closeGuidelines);
 document.getElementById('guidelines-link').addEventListener('click', openGuidelines);
-document.getElementById('privacy-link').addEventListener('click', openGuidelines);
 document.getElementById('guidelines-link-submit').addEventListener('click', openGuidelines);
 
 /* ── Rating ─────────────────────────────────────────────── */
@@ -468,31 +729,27 @@ async function handleSubmit(e) {
   try {
     const tags = document.getElementById('f-tags').value
       .split(',').map(t => t.trim()).filter(Boolean);
-    const tool = await apiFetch('/api/tools', {
+    await apiFetch('/api/tools', {
       method: 'POST',
       body: JSON.stringify({
-        title:        document.getElementById('f-title').value.trim(),
-        desc:         document.getElementById('f-desc').value.trim(),
-        url:          document.getElementById('f-url').value.trim(),
-        creator_name: document.getElementById('f-creator').value.trim(),
-        cost:         parseInt(document.getElementById('f-cost').value, 10) || 0,
-        lang:         document.getElementById('f-lang').value,
+        title: document.getElementById('f-title').value.trim(),
+        desc:  document.getElementById('f-desc').value.trim(),
+        url:   document.getElementById('f-url').value.trim(),
+        cost:  parseInt(document.getElementById('f-cost').value, 10) || 0,
+        lang:  document.getElementById('f-lang').value,
         tags,
       })
     });
-
-    if (tool.edit_token) {
-      saveEditToken(tool.id, tool.edit_token);
-    }
 
     e.target.reset();
     document.getElementById('desc-count').textContent = '0 / 300';
 
     const flash = document.getElementById('flash');
     flash.className = 'flash info';
-    flash.textContent = `工具已提交！正在等待審核。${tool.edit_token ? '你的編輯密鑰已自動儲存，也可以在開發者工具 > Application > localStorage 中找到。' : ''}`;
+    flash.textContent = '工具已提交！正在等待審核，通過後將自動上架。';
     setTimeout(() => flash.classList.add('hidden'), 8000);
 
+    loadMyStudio();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (err) {
     alert('提交失敗：' + err.message);
@@ -548,97 +805,85 @@ async function lookupCreator() {
   }
 }
 
-/* ── Edit tool via token ────────────────────────────────── */
-async function loadToolForEdit() {
-  const token  = document.getElementById('edit-token-input').value.trim();
-  const toolId = parseInt(document.getElementById('edit-tool-id-input').value, 10);
-  if (!token || !toolId) { alert('請輸入工具 ID 和編輯密鑰'); return; }
-
-  const panel = document.getElementById('edit-tool-panel');
-  panel.classList.remove('hidden');
-  panel.innerHTML = '<p class="loading-text">載入中...</p>';
-
-  try {
-    const tool = await apiFetch(`/api/tools?sort=newest`).then(tools => tools.find(t => t.id === toolId));
-    if (!tool) {
-      panel.innerHTML = '<p class="error-text">找不到此工具（可能還在審核中或已下架）。你仍可嘗試編輯。</p>';
-    }
-
-    const t = tool || { title: '', desc: '', url: '', tags: [], lang: '中文', cost: 0 };
-    panel.innerHTML = `
-      <h3>編輯工具 #${toolId}</h3>
-      <form id="edit-form">
-        <div class="field">
-          <label>工具名稱</label>
-          <input type="text" id="e-title" value="${esc(t.title)}" maxlength="80">
-        </div>
-        <div class="field">
-          <label>簡短描述</label>
-          <textarea id="e-desc" maxlength="300">${esc(t.desc)}</textarea>
-        </div>
-        <div class="field">
-          <label>工具網址</label>
-          <input type="url" id="e-url" value="${esc(t.url)}">
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>費用（點數）</label>
-            <input type="number" id="e-cost" value="${t.cost}" min="0" max="100">
-          </div>
-          <div class="field">
-            <label>語言</label>
-            <input type="text" id="e-lang" value="${esc(t.lang)}" maxlength="20">
-          </div>
-        </div>
-        <div class="field">
-          <label>標籤（逗號分隔）</label>
-          <input type="text" id="e-tags" value="${esc(t.tags.join(', '))}">
-        </div>
-        <div class="edit-actions">
-          <button type="submit" class="submit-btn">儲存變更</button>
-          <button type="button" class="danger-btn" id="delete-tool-btn">刪除工具</button>
-        </div>
-      </form>`;
-
-    document.getElementById('edit-form').addEventListener('submit', async ev => {
-      ev.preventDefault();
-      const btn = ev.target.querySelector('.submit-btn');
-      btn.disabled = true;
-      try {
-        await apiFetch(`/api/tools/${toolId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'x-edit-token': token },
-          body: JSON.stringify({
-            title: document.getElementById('e-title').value.trim(),
-            desc:  document.getElementById('e-desc').value.trim(),
-            url:   document.getElementById('e-url').value.trim(),
-            cost:  parseInt(document.getElementById('e-cost').value, 10) || 0,
-            lang:  document.getElementById('e-lang').value.trim(),
-            tags:  document.getElementById('e-tags').value.split(',').map(s => s.trim()).filter(Boolean),
-          })
-        });
-        alert('工具已更新！');
-        loadTools();
-      } catch (err) { alert('更新失敗：' + err.message); }
-      finally { btn.disabled = false; }
-    });
-
-    document.getElementById('delete-tool-btn').addEventListener('click', async () => {
-      if (!confirm('確定要刪除此工具嗎？此操作無法復原。')) return;
-      try {
-        await apiFetch(`/api/tools/${toolId}`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', 'x-edit-token': token },
-        });
-        alert('工具已刪除。');
-        panel.innerHTML = '<p class="hint-text">工具已刪除。</p>';
-        loadTools();
-      } catch (err) { alert('刪除失敗：' + err.message); }
-    });
-  } catch (e) {
-    panel.innerHTML = `<p class="error-text">${esc(e.message)}</p>`;
-  }
+/* ── Inline edit for my-tools (logged-in user) ─────────── */
+function showInlineEdit(toolId, container) {
+  const tool = allTools.find(t => t.id === toolId) || {};
+  const t = { title: '', desc: '', url: '', tags: [], lang: '中文', cost: 0, ...tool };
+  container.innerHTML = `
+    <form class="inline-edit-form" data-id="${toolId}">
+      <div class="field"><label>工具名稱</label><input type="text" class="ie-title" value="${esc(t.title)}" maxlength="80"></div>
+      <div class="field"><label>簡短描述</label><textarea class="ie-desc" maxlength="300">${esc(t.desc)}</textarea></div>
+      <div class="field"><label>工具網址</label><input type="url" class="ie-url" value="${esc(t.url)}"></div>
+      <div class="field-row">
+        <div class="field"><label>費用</label><input type="number" class="ie-cost" value="${t.cost}" min="0" max="100"></div>
+        <div class="field"><label>語言</label><input type="text" class="ie-lang" value="${esc(t.lang)}" maxlength="20"></div>
+      </div>
+      <div class="field"><label>標籤</label><input type="text" class="ie-tags" value="${esc(t.tags.join(', '))}"></div>
+      <div class="edit-actions">
+        <button type="submit" class="submit-btn">儲存變更</button>
+        <button type="button" class="submit-btn submit-btn-secondary ie-cancel">取消</button>
+      </div>
+    </form>`;
 }
+
+document.getElementById('my-tools-list')?.addEventListener('click', async e => {
+  const editBtn   = e.target.closest('.my-edit-btn');
+  const deleteBtn = e.target.closest('.my-delete-btn');
+  const cancelBtn = e.target.closest('.ie-cancel');
+  const shareBtn  = e.target.closest('.my-tool-share');
+
+  if (shareBtn) {
+    shareTool(Number(shareBtn.dataset.id), shareBtn.dataset.title);
+    return;
+  }
+
+  if (editBtn) {
+    const toolId = Number(editBtn.dataset.id);
+    const card = editBtn.closest('.my-tool-card');
+    showInlineEdit(toolId, card);
+    return;
+  }
+
+  if (deleteBtn) {
+    const toolId = Number(deleteBtn.dataset.id);
+    if (!confirm('確定要刪除此工具嗎？此操作無法復原。')) return;
+    try {
+      await apiFetch(`/api/tools/${toolId}`, { method: 'DELETE' });
+      alert('工具已刪除。');
+      loadMyStudio();
+      loadTools();
+    } catch (err) { alert('刪除失敗：' + err.message); }
+    return;
+  }
+
+  if (cancelBtn) { loadMyStudio(); }
+});
+
+document.getElementById('my-tools-list')?.addEventListener('submit', async e => {
+  if (!e.target.classList.contains('inline-edit-form')) return;
+  e.preventDefault();
+  const form = e.target;
+  const toolId = Number(form.dataset.id);
+  const btn = form.querySelector('.submit-btn');
+  btn.disabled = true;
+  try {
+    await apiFetch(`/api/tools/${toolId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        title: form.querySelector('.ie-title').value.trim(),
+        desc:  form.querySelector('.ie-desc').value.trim(),
+        url:   form.querySelector('.ie-url').value.trim(),
+        cost:  parseInt(form.querySelector('.ie-cost').value, 10) || 0,
+        lang:  form.querySelector('.ie-lang').value.trim(),
+        tags:  form.querySelector('.ie-tags').value.split(',').map(s => s.trim()).filter(Boolean),
+      })
+    });
+    alert('工具已更新！');
+    loadMyStudio();
+    loadTools();
+  } catch (err) { alert('更新失敗：' + err.message); }
+  finally { btn.disabled = false; }
+});
 
 /* ── Event delegation ───────────────────────────────────── */
 function attachGridEvents(container) {
@@ -661,6 +906,12 @@ function attachGridEvents(container) {
     const reportBtn = e.target.closest('.report-btn');
     if (reportBtn) {
       openReportModal(reportBtn.dataset.type, reportBtn.dataset.target);
+      return;
+    }
+    // Share button
+    const shareBtn = e.target.closest('.share-btn');
+    if (shareBtn) {
+      shareTool(Number(shareBtn.dataset.id), shareBtn.dataset.title);
       return;
     }
     // Follow button
@@ -714,9 +965,10 @@ function attachGridEvents(container) {
   });
 }
 
-attachGridEvents(document.getElementById('followed-grid'));
-attachGridEvents(document.getElementById('featured-grid'));
-attachGridEvents(document.getElementById('tool-grid'));
+['followed-grid', 'featured-grid', 'tool-grid'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) attachGridEvents(el);
+});
 
 /* ── Tag filter buttons ─────────────────────────────────── */
 document.getElementById('tag-filters').addEventListener('click', e => {
@@ -728,11 +980,29 @@ document.getElementById('tag-filters').addEventListener('click', e => {
 });
 
 /* ── Sort buttons ───────────────────────────────────────── */
-document.querySelector('.sort-btns').addEventListener('click', e => {
+document.querySelector('.sort-btns')?.addEventListener('click', e => {
   const btn = e.target.closest('.sort-btn');
   if (!btn) return;
   activeSort = btn.dataset.sort;
+  sinceDays = 0;
   document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === activeSort));
+  document.getElementById('this-week-btn')?.classList.remove('active');
+  loadTools();
+});
+
+/* ── This week button ──────────────────────────────────── */
+document.getElementById('this-week-btn')?.addEventListener('click', () => {
+  const btn = document.getElementById('this-week-btn');
+  const isActive = btn.classList.contains('active');
+  if (isActive) {
+    sinceDays = 0;
+    btn.classList.remove('active');
+  } else {
+    sinceDays = 7;
+    activeSort = 'newest';
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === 'newest'));
+    btn.classList.add('active');
+  }
   loadTools();
 });
 
@@ -752,7 +1022,7 @@ document.getElementById('creator-select').addEventListener('change', e => {
 document.getElementById('modal-close').addEventListener('click', closePreview);
 document.getElementById('modal-backdrop').addEventListener('click', closePreview);
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closePreview(); closeSheet(); closeReportModal(); closeGuidelines(); }
+  if (e.key === 'Escape') { closePreview(); closeSheet(); closeReportModal(); closeGuidelines(); closeTopupModal(); closeAuthModal(); }
 });
 
 /* ── Submit form ────────────────────────────────────────── */
@@ -769,9 +1039,6 @@ document.getElementById('creator-name-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') lookupCreator();
 });
 
-/* ── Edit token lookup ──────────────────────────────────── */
-document.getElementById('token-lookup-btn').addEventListener('click', loadToolForEdit);
-
 /* ── Scroll-to-top ──────────────────────────────────────── */
 const scrollTopBtn = document.getElementById('scroll-top');
 window.addEventListener('scroll', () => {
@@ -779,6 +1046,34 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
+/* ── Deep link: ?tool=<id> ──────────────────────────────── */
+function handleDeepLink() {
+  const params = new URLSearchParams(location.search);
+  const toolId = parseInt(params.get('tool'), 10);
+  if (!toolId) return;
+  switchTab('browse');
+  requestAnimationFrame(() => {
+    const card = document.querySelector(`.card[data-id="${toolId}"]`);
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('card-highlight');
+    setTimeout(() => card.classList.remove('card-highlight'), 3000);
+  });
+}
+
+/* ── Cookie banner ──────────────────────────────────────── */
+(function initCookieBanner() {
+  if (localStorage.getItem('cookie_acknowledged')) return;
+  const banner = document.getElementById('cookie-banner');
+  if (!banner) return;
+  banner.classList.remove('hidden');
+  document.getElementById('cookie-accept')?.addEventListener('click', () => {
+    localStorage.setItem('cookie_acknowledged', '1');
+    banner.classList.add('hidden');
+  });
+})();
+
 /* ── Init ───────────────────────────────────────────────── */
 refreshPointsUI();
-loadTools();
+loadTools().then(handleDeepLink);
+checkAuth().then(() => { if (currentUser) loadMyStudio(); });

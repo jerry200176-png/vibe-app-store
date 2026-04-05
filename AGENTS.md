@@ -8,7 +8,7 @@
 
 **Vibe App Store** — 亞洲社群的 AI 工具目錄。
 
-使用者可以瀏覽、搜尋、提交工具，並對工具給予 1–5 星評分與留言。**無帳號設計**；後端以 SQLite 持久化資料。
+使用者可以瀏覽、搜尋工具，並給予 1–5 星評分與留言（免帳號）。創作者需以 Email+密碼註冊帳號後才能投稿工具，工具需經管理員審核才上架。後端以 SQLite 持久化資料。
 
 ---
 
@@ -27,15 +27,21 @@ npm start     → node server/index.js
 
 ```
 server/
-├── index.js          Express 入口；helmet、trust proxy(prod)、GET/POST /api 限流、`GET /api/health`、掛載路由
+├── index.js          Express 入口；helmet、cookie-parser、trust proxy(prod)、限流、掛載路由
 ├── db.js             SQLite 初始化（sqlite + sqlite3 套件，async API）
+├── middleware/
+│   └── auth.js       JWT 驗證：signToken、requireUser、optionalUser、cookie 設定
 ├── util/
 │   └── httpError.js  sendServerError(res, err) — 生產環境不洩漏 e.message
 └── routes/
-    ├── tools.js      GET /api/tools, POST /api/tools, POST /api/tools/:id/use
+    ├── auth.js       POST register/login/logout, GET me — 帳號系統
+    ├── tools.js      GET /api/tools, POST（需登入）, PUT/DELETE（擁有權）, GET /api/tools/me
     ├── ratings.js    POST /api/ratings/:toolId
     ├── comments.js   GET/POST /api/comments/:toolId
-    └── creators.js   GET /api/creators/stats
+    ├── creators.js   GET /api/creators/stats, GET /api/creators/me（需登入）
+    ├── reports.js       POST /api/reports
+    ├── admin.js         管理員 API（需 ADMIN_KEY）
+    └── transparency.js  GET /api/transparency/summary（公開唯讀）
 ```
 
 **重要：** 使用的是 `sqlite` + `sqlite3`（async/await API），**不是** `better-sqlite3`（sync API）。修改 DB 相關程式碼時請使用 `await db.all()` / `await db.get()` / `await db.run()` 形式。
@@ -49,10 +55,13 @@ server/
 - Schema：
 
 ```sql
-tools     (id, title, desc, url, tags TEXT/JSON, lang, creator_name, cost, usage_count, points_earned, is_featured, created_at)
+users     (id, email UNIQUE, password_hash, display_name, created_at)
+tools     (id, title, desc, url, tags TEXT/JSON, lang, creator_name, cost, usage_count, points_earned, is_featured, status, owner_user_id → users.id, edit_token_hash, reviewed_at, created_at)
 ratings   (id, tool_id → tools.id, stars 1-5, created_at)
 comments  (id, tool_id → tools.id, body, created_at)
 usage_log (id, tool_id → tools.id, created_at)
+reports   (id, target_type, target_id, reason, detail, status, created_at)
+violations(id, creator_name, tool_id, report_id, reason, created_at)
 ```
 
 - `cost`: 0 = 免費, 1–100 = 付費（虛擬點數）
@@ -68,9 +77,16 @@ usage_log (id, tool_id → tools.id, created_at)
 
 ```
 public/
-├── index.html    殼層 HTML，引用 /style.css 與 /app.js
-├── style.css     所有樣式（深色主題，CSS 變數定義在 :root）
-└── app.js        所有前端邏輯（fetch API、事件委派、localStorage）
+├── index.html           殼層 HTML，引用 /style.css 與 /app.js
+├── style.css            所有樣式（深色主題，CSS 變數定義在 :root）
+├── app.js               所有前端邏輯（fetch API、事件委派、localStorage）
+├── for-creators.html    創作者招募落地頁（純靜態）
+├── transparency.html    透明度中心（fetch /api/transparency/summary 顯示營運數據）
+├── privacy.html         隱私權政策（純靜態）
+├── terms.html           使用條款（純靜態）
+├── admin.html           管理員後台
+├── admin.js             管理員前端邏輯
+└── admin-style.css      管理員樣式
 ```
 
 **注意：** 根目錄的 `index.html` **僅為 GitHub Pages 佔位頁**（一段重導說明文字，不含任何應用邏輯）。**正式 UI 唯一來源是 `public/`**。永遠不要在根目錄 `index.html` 加入功能程式碼。
@@ -91,13 +107,22 @@ public/
 
 | 方法 | 路徑 | 說明 |
 |------|------|------|
-| GET | `/api/tools?sort=newest\|top\|trending&tag=&creator=` | 列表，含聚合欄位與 v2 欄位 |
-| POST | `/api/tools` | 新增工具（含 `creator_name`, `cost`） |
-| POST | `/api/tools/:id/use` | 記錄使用事件，更新 usage_count / points_earned |
+| POST | `/api/auth/register` | 註冊（email, password, display_name），設定 JWT cookie |
+| POST | `/api/auth/login` | 登入，設定 JWT cookie |
+| POST | `/api/auth/logout` | 清除 cookie |
+| GET | `/api/auth/me` | 目前使用者資訊（需登入） |
+| GET | `/api/tools?sort=newest\|top\|trending&tag=&creator=&since_days=` | 工具列表（僅 status=active） |
+| POST | `/api/tools` | 新增工具（需登入，自動綁定 owner_user_id） |
+| PUT | `/api/tools/:id` | 更新工具（需為 owner 或持有 edit_token） |
+| DELETE | `/api/tools/:id` | 刪除工具（同上） |
+| GET | `/api/tools/me` | 我的工具列表（需登入） |
+| POST | `/api/tools/:id/use` | 記錄使用事件 |
 | POST | `/api/ratings/:toolId` | 評分 `{ stars: 1-5 }` |
 | GET | `/api/comments/:toolId` | 留言列表 |
 | POST | `/api/comments/:toolId` | 新增留言 `{ body }` |
-| GET | `/api/creators/stats?name=` | 創作者收益統計 |
+| GET | `/api/creators/stats?name=` | 公開創作者統計 |
+| GET | `/api/creators/me` | 我的創作者統計（需登入） |
+| GET | `/api/transparency/summary` | 平台營運概況（公開唯讀） |
 
 所有 API 回應為 JSON；錯誤回應格式 `{ "error": "說明" }`。
 
