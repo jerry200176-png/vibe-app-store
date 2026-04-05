@@ -70,12 +70,12 @@
 
 ---
 
-## ADR-009：Render Persistent Disk + DB_PATH 為正式環境預設持久化
+## ADR-009：Render 部署 — 免費方案預設、持久化為選配
 
-- **狀態：** 已採納  
-- **情境：** Render 免費方案磁碟為暫時性，重部署會清空 SQLite 資料。  
-- **決定：** `render.yaml` 宣告 1 GB Persistent Disk（`/var/data`），`DB_PATH=/var/data/appstore.db`。`server/db.js` 已支援 `DB_PATH` 環境變數。  
-- **後果：** 需付費方案才能使用 disk；免費方案仍可部署但重啟後資料重置。首次啟用 disk 後舊暫時性資料不會自動遷移。不遷移 PostgreSQL — 若未來需要，另起 ADR。
+- **狀態：** 已採納（2026-04-05 修訂）  
+- **情境：** 多數種子使用者為 Render **免費** Web Service；Persistent Disk 僅付費方案可用，寫進 Blueprint 會導致無法套用或與實際方案不符。  
+- **決定：** `render.yaml` **不**宣告 disk；生產環境沿用預設 SQLite 路徑（`DB_PATH` 未設時為專案下 `data/appstore.db`），在免費層級為暫存檔案系統，**重部署會清空**。需要長期持久化時，由營運者在 Render UI 加掛 Persistent Disk 並自行設定 `DB_PATH`（例如 `/var/data/appstore.db`）。`server/db.js` 始終支援 `DB_PATH` 覆寫。  
+- **後果：** Blueprint 一鍵部署與免費方案一致；升級付費後再掛 disk，無需改程式。不遷移 PostgreSQL — 若未來要換庫，另起 ADR。
 
 ---
 
@@ -102,3 +102,4 @@
 |------|------|
 | 2026-04-05 | 初版：整理與程式碼一致的關鍵決策 |
 | 2026-04-05 | 新增 ADR-009（Persistent Disk）、ADR-010（CI）、ADR-011（聯絡信箱 env） |
+| 2026-04-05 | ADR-009 修訂：`render.yaml` 預設不含 disk，對齊免費 Render；持久化改儀表板選配 |

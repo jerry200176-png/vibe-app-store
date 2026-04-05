@@ -345,14 +345,16 @@ npm start      # 正式模式（無 watch）
 
 ### Render.com（推薦）
 
+預設 `render.yaml` 對齊 **免費 Web Service**（無 Persistent Disk），可直接用 Blueprint 部署。
+
 1. 前往 [render.com](https://render.com) 並用 GitHub 帳號登入
 2. 點 **New → Blueprint**，選擇 `vibe-app-store` 儲存庫
-3. Render 會自動讀取 `render.yaml`（含 **Persistent Disk** 與環境變數），確認後點 **Apply**
+3. Render 會讀取 `render.yaml`（`JWT_SECRET`、`ADMIN_KEY` 等），確認後點 **Apply**
 4. 約 2–3 分鐘後取得公開網址
 
-> **資料持久化：** `render.yaml` 已宣告 1 GB Persistent Disk 掛載於 `/var/data`，`DB_PATH` 指向 `/var/data/appstore.db`。重新部署時**資料庫不會重置**。注意：Persistent Disk **需要付費方案**（Render 免費方案的磁碟為暫時性）。若使用免費方案，可在 Render 儀表板移除 disk 設定，但重部署會清空資料。
+> **免費方案與資料：** 未掛 Persistent Disk 時，SQLite 寫在執行個體的暫存檔案系統（等同預設 `data/appstore.db` 行為）。**每次重新部署或執行個體回收後，資料庫會重置**（會重新載入種子工具）。帳號與投稿在免費層級無法長期保留，屬預期限制。
 >
-> **首次啟用磁碟後**，舊的暫時性資料不會自動遷移至新 disk；啟用後等同全新資料庫，種子資料會重新載入。
+> **若要長期持久化（付費）：** 在 Render 儀表板為該 Web Service 新增 **Persistent Disk**（例如掛載 `/var/data`），並在 **Environment** 設定 `DB_PATH=/var/data/appstore.db`。首次掛上磁碟後，舊暫存資料不會自動遷移，等同新庫。
 
 ### 更新部署
 

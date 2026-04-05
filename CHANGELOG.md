@@ -10,7 +10,7 @@
 
 - **AI SOP**：預設任務完成後主動 `git commit` + `git push` 至 GitHub（見 `docs/AI_SOP.md`、`CLAUDE.md`、`.cursor/rules`、`AGENTS.md`、`CONTRIBUTING.md`）
 - **SECURITY.md**：新增「開發者本機設定（Claude Code）」— 提醒勿提交或分享 `.claude/`，以及密鑰外洩時應輪替
-- **資料持久化**：`render.yaml` 宣告 Persistent Disk（1 GB `/var/data`），`DB_PATH=/var/data/appstore.db`；重部署不再清空資料庫（需付費方案）
+- **Render 部署**：`render.yaml` 改為預設不含 Persistent Disk，免費 Web Service 可直接套用 Blueprint；資料庫在重部署後會重置。付費後可於儀表板掛 disk 並設定 `DB_PATH`（見 README）
 - **CI**：新增 `scripts/smoke.js` smoke test + `.github/workflows/ci.yml`（Node 18/20 矩陣，push/PR 觸發）
 - **DB 初始化**：修正 `idx_tools_owner` 索引建立順序——現在在 `owner_user_id` 欄位新增之後才建立，避免全新 DB 初始化失敗
 - **server/index.js**：匯出 `http.Server` Promise，供 smoke test 程式性啟動與關閉
