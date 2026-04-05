@@ -7,8 +7,9 @@
 ## 開始之前
 
 1. 閱讀 [README.md](README.md) 了解專案架構與本地執行方式
-2. 確認 Node.js 版本 18 以上
-3. 搜尋現有 [Issues](https://github.com/jerry200176-png/vibe-app-store/issues) 確認問題或功能尚未被提過
+2. **使用 AI 協助開發時**：一併閱讀 [docs/AI_SOP.md](docs/AI_SOP.md) 與 [AGENTS.md](AGENTS.md)。**Claude Code** 會讀取根目錄 [CLAUDE.md](CLAUDE.md)；**Cursor** 會套用 `.cursor/rules/vibe-app-store.mdc`
+3. 確認 Node.js 版本 18 以上
+4. 搜尋現有 [Issues](https://github.com/jerry200176-png/vibe-app-store/issues) 確認問題或功能尚未被提過
 
 ---
 
@@ -40,12 +41,21 @@ npm run dev   # 開發伺服器，http://localhost:3000
 
 | 功能 | 手動測試重點 |
 |------|-------------|
-| 工具列表 | 頁面載入、排序切換、標籤篩選 |
-| 搜尋 | 中文關鍵字、英文關鍵字、無結果狀態 |
-| 提交工具 | 必填驗證、無效 URL、成功後列表更新 |
+| 工具列表 | 頁面載入、排序（最新／評分／熱門）、標籤與創作者篩選 |
+| 本週上新 | 「本週上新」按鈕、`since_days` 與其他篩選併用、再次點擊取消 |
+| 搜尋 | 中文／英文關鍵字、無結果狀態 |
+| 帳號 | 註冊、登入、登出；未登入時提交分頁僅顯示 gate |
+| 提交工具 | 登入後必填驗證、無效 URL、成功後工作室可見 **審核中**；公開列表不出現直至核准 |
+| 創作者工作室 | `我的工具` 列表、統計、內嵌編輯／刪除、複製宣傳連結 |
+| 深層連結 | `/?tool=<id>` 捲動並高亮卡片（工具須已 active） |
+| 追蹤創作者 | 追蹤／取消、追蹤區塊顯示；7 天內新工具「新」badge |
 | 評分 | 點擊星星、送出後分數更新、刷新後標記為已評分 |
-| 留言 | 新增留言、Enter 送出、展開/收起留言面板 |
-| iframe 預覽 | 可預覽的網站、不允許嵌入的網站（fallback） |
+| 留言 | bottom sheet、新增留言、Enter 送出 |
+| 檢舉 | 工具與留言檢舉表單送出 |
+| iframe 預覽 | 可嵌入與不可嵌入（fallback）、扣點工具點數不足提示 |
+| 靜態與合規 | `/for-creators.html`、`/transparency.html`（數字載入）、`/privacy.html`、`/terms.html`、Cookie 條幅 |
+| Admin | `admin.html` + `ADMIN_KEY`：待審列表、核准後首頁可見 |
+| API（可選） | `GET /api/transparency/summary`、`GET /api/health` |
 
 ### 4. 提交
 
@@ -71,6 +81,11 @@ git commit -m "feat: 新增依語言篩選功能"
 - 說明「做了什麼」與「為什麼」
 - 如果關聯到某個 Issue，加上 `Closes #123`
 - 若更動 API 或資料庫 schema，同步更新 `README.md` 的 API 文件與 `CHANGELOG.md`
+- 若更動**產品邊界**（審核流程、匿名／登入規則、公開列表條件），同步更新 `docs/DECISIONS.md` 與 `docs/AI_SOP.md`（必要時 `AGENTS.md`）
+
+### AI／自動化代理（Cursor、Claude Code）
+
+維護者期望：**每次在 repo 內完成可交付變更後，預設主動 `git commit` 並 `git push`**，不必等人類重複提醒。例外：使用者明確說不要動 git、僅探索、或要人類自行發 PR。詳見 [docs/AI_SOP.md](docs/AI_SOP.md) 第 3 節步驟 7–8。
 
 ---
 
@@ -87,14 +102,14 @@ git commit -m "feat: 新增依語言篩選功能"
 
 - 不引入未經討論的大型框架（jQuery、React、Vue 等）
 - CSS 使用已定義的 CSS 變數（`--accent`、`--surface` 等），不寫魔法數字顏色
-- JS 維持事件委派模式（在 `#tool-grid` 上監聽，不在每個卡片上 addListener）
+- JS 維持事件委派模式（在 `#tool-grid`、`#featured-grid`、`#followed-grid` 上監聽，見 `app.js` 的 `attachGridEvents`）
 - 使用 `esc()` 函式處理所有動態插入的 HTML 內容，防止 XSS
 
 ### 安全性原則
 
 - URL 驗證：使用 `new URL()` 並確認協定為 `http:` 或 `https:`
 - 輸入長度限制：title ≤ 80、desc ≤ 300、comment ≤ 500
-- 所有回應避免洩漏 stack trace 或敏感路徑
+- 所有回應避免洩漏 stack trace 或敏感路徑；後端路由 `catch` 請使用 `sendServerError(res, e)`（見 `server/util/httpError.js`）
 
 ---
 

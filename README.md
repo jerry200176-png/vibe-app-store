@@ -17,6 +17,7 @@
 - [環境變數](#環境變數)
 - [API 文件](#api-文件)
 - [部署](#部署)
+- [專案文件與 AI 協作](#專案文件與-ai-協作)
 - [常見問題](#常見問題)
 - [貢獻](#貢獻)
 
@@ -47,7 +48,7 @@ Vibe App Store 是一個**社群驅動的 AI 工具目錄**，專為亞洲用戶
 | ⭐ 評分 | 1–5 星評分，顯示平均分與評分人數 |
 | 💬 留言 | 每個工具獨立留言區，即時顯示 |
 | 🖼 預覽 | iframe 嵌入預覽，不支援時顯示直接開啟按鈕 |
-| ➕ 提交工具 | 填寫名稱、描述、網址、創作者、費用、標籤、語言即可送出 |
+| ➕ 提交工具 | 需先註冊／登入；填寫名稱、描述、網址、費用、標籤、語言（創作者名稱為帳號顯示名稱）；送出後 **審核中** 直至管理員核准 |
 | 🌐 語言標籤 | 標示工具支援語言（中文 / 英文 / 多語言 / 日文 / 韓文） |
 | 💰 點數系統 | 使用者初始 100 點（localStorage），付費工具需扣點才能使用 |
 | ⭐ 精選推薦 | 首頁頂部顯示精選工具（is_featured 欄位） |
@@ -65,8 +66,9 @@ Vibe App Store 是一個**社群驅動的 AI 工具目錄**，專為亞洲用戶
 | 前端 | 純 HTML + CSS + JavaScript（無框架，由 Express 提供靜態檔） |
 | 部署 | [Render.com](https://render.com)（含 `render.yaml` 設定） |
 
-> 整個前端只有三個檔案：`public/index.html`、`public/style.css`、`public/app.js`，無需任何建置步驟。  
-> **注意：** 根目錄的 `index.html` 僅為 GitHub Pages 佔位頁，不含任何應用功能。正式 UI 的唯一來源是 `public/`。
+> **主應用（SPA）** 核心為三個檔案：`public/index.html`、`public/style.css`、`public/app.js`，無需建置。  
+> 另有多個**純靜態頁**（招募、透明度、隱私、條款）與 **Admin 後台**（`admin.html` + `admin.js` + `admin-style.css`）。  
+> **注意：** 根目錄的 `index.html` 僅為 GitHub Pages 佔位頁。正式 UI 與 API 的來源是 `public/` + Express。
 
 ---
 
@@ -75,21 +77,29 @@ Vibe App Store 是一個**社群驅動的 AI 工具目錄**，專為亞洲用戶
 ```
 vibe-app-store/
 ├── server/
-│   ├── index.js          # Express 入口、路由掛載、靜態檔服務
-│   ├── db.js             # SQLite 連線、schema + migration、種子資料
-│   └── routes/
-│       ├── tools.js      # GET/POST /api/tools, POST /api/tools/:id/use
-│       ├── ratings.js    # POST /api/ratings/:toolId
-│       ├── comments.js   # GET/POST /api/comments/:toolId
-│       └── creators.js   # GET /api/creators/stats
+│   ├── index.js          # Express 入口、Helmet、限流、路由掛載、靜態檔
+│   ├── db.js             # SQLite、schema、migration、種子資料
+│   ├── middleware/       # auth.js（JWT cookie）
+│   ├── util/
+│   └── routes/           # auth, tools, ratings, comments, creators,
+│                         # reports, admin, transparency
 ├── public/
-│   ├── index.html        # 前端殼層（引用下方兩個檔案）
-│   ├── style.css         # 所有樣式（深色主題、響應式）
-│   └── app.js            # 所有前端邏輯（fetch API、互動、點數系統）
-├── data/                 # 執行時自動建立，存放 appstore.db（已 gitignore）
-├── index.html            # GitHub Pages 佔位頁（僅重導說明，非正式 UI）
+│   ├── index.html        # 主站殼層
+│   ├── style.css
+│   ├── app.js
+│   ├── for-creators.html / transparency.html / privacy.html / terms.html
+│   ├── admin.html, admin.js, admin-style.css
+├── docs/
+│   ├── README.md         # 文件索引
+│   ├── AI_SOP.md         # 給 AI 的標準作業程序（產品意圖 + 流程）
+│   └── DECISIONS.md      # 已定案決策（ADR 精簡版）
+├── .cursor/rules/        # Cursor 自動載入的專案規則（指向上述文件）
+├── data/                 # 執行時 appstore.db（gitignore）
+├── index.html            # GitHub Pages 佔位頁（非正式 UI）
+├── AGENTS.md             # 給 AI 的技術脈絡（與 docs/AI_SOP 並讀）
+├── CLAUDE.md             # Claude Code 自動載入的專案指引
 ├── package.json
-├── render.yaml           # Render.com 一鍵部署設定
+├── render.yaml
 └── README.md
 ```
 
@@ -380,6 +390,18 @@ git push
 ### 精選標記
 
 符合精選資格（無違規、有評分、連結有效）的工具，管理員可在資料庫中設定 `is_featured = 1`。目前無自動精選機制，需人工判斷。
+
+---
+
+## 專案文件與 AI 協作
+
+若你使用 Cursor、Copilot、Claude 等代理協助開發，請讓它們優先閱讀：
+
+1. **[docs/AI_SOP.md](docs/AI_SOP.md)** — 產品 North Star、技術邊界、標準工作流程與驗收習慣（**減少每次重講 SOP**）。
+2. **[AGENTS.md](AGENTS.md)** — 架構、資料表、API 一覽、程式慣例。
+3. **[docs/DECISIONS.md](docs/DECISIONS.md)** — 已拍板決策（匿名投稿關閉、JWT、審核流程等）。
+
+**工具自動載入：** **Cursor** → `.cursor/rules/vibe-app-store.mdc`。**Claude Code** → 根目錄 **[CLAUDE.md](CLAUDE.md)**（精簡版＋連結到上述三份文件，與 Cursor 規則對齊）。
 
 ---
 

@@ -2,13 +2,28 @@
 
 本文件幫助 AI 代理（Claude、Copilot 等）快速理解專案架構、慣例與注意事項，避免產生與現有程式碼衝突的建議。人類維護者同樣可以參考。
 
+**開始任務前請先讀：** [`docs/AI_SOP.md`](docs/AI_SOP.md)（產品意圖與工作流程）→ 本檔（技術細節）→ [`docs/DECISIONS.md`](docs/DECISIONS.md)（已定案決策）。**Cursor**：`.cursor/rules/vibe-app-store.mdc`。**Claude Code**：根目錄 [`CLAUDE.md`](CLAUDE.md)。
+
+---
+
+## 產品不變量（違反前須與維護者確認）
+
+| 不變量 | 說明 |
+|--------|------|
+| 審核上架 | 新工具 `status = pending`；`GET /api/tools` **僅**回傳 `active`。 |
+| 創作者帳號 | `POST /api/tools` 必須登入；`creator_name` 後端取自使用者，不可信任 body 偽造。 |
+| 訪客能力 | 未登入可瀏覽、評分、留言；評分防重複僅 localStorage（刻意取捨）。 |
+| 信任與合規 | 檢舉、Strike、透明度頁、`/privacy.html`、`/terms.html` 為產品敘事一環，勿無故移除。 |
+| 正式 UI | 僅 `public/`；根目錄 `index.html` 僅 GitHub Pages 佔位。 |
+| 管理後台 | `/api/admin/*` 需 `ADMIN_KEY`；審核與違規置由此進行。 |
+
 ---
 
 ## 專案概覽
 
 **Vibe App Store** — 亞洲社群的 AI 工具目錄。
 
-使用者可以瀏覽、搜尋工具，並給予 1–5 星評分與留言（免帳號）。創作者需以 Email+密碼註冊帳號後才能投稿工具，工具需經管理員審核才上架。後端以 SQLite 持久化資料。
+使用者可以瀏覽、搜尋工具，並給予 1–5 星評分與留言（**不需帳號**）。**投稿與管理自己的工具**需 Email+密碼註冊；新投稿為 **pending**，經管理員審核後才會以 **active** 出現在公開列表。後端以 SQLite 持久化資料。
 
 ---
 
@@ -93,13 +108,14 @@ public/
 
 ### 前端關鍵慣例
 
-- **狀態**：`allTools` 陣列 + `activeTag`、`activeSort`、`activeCreator`、`searchQuery` 變數
+- **狀態**：`allTools` + `activeTag`、`activeSort`、`activeCreator`、`searchQuery`、**`sinceDays`**（本週上新）、`currentUser`（登入狀態）
 - **點數**：`localStorage` 的 `vibe_points`（預設 100），由 `getPoints()` / `setPoints()` 管理
-- **渲染**：`renderAll()` 每次過濾/排序後重新渲染整個 grid
-- **事件**：所有 grid 內的互動透過事件委派掛在 `#tool-grid` 與 `#featured-grid` 上
-- **XSS 防護**：所有動態插入的字串必須通過 `esc()` 函式處理
-- **評分防重複**：透過 `localStorage` 的 `rated_tools`（物件）與 `my_stars`（物件）
-- **API 呼叫**：統一透過 `apiFetch(path, opts)` 包裝函式
+- **渲染**：`renderAll()` 每次過濾/排序後重新渲染各 grid
+- **事件委派**：卡片互動（評分、留言、追蹤、試用、檢舉、分享等）掛在 **`#tool-grid`、`#featured-grid`、`#followed-grid`**（見 `attachGridEvents`）；改卡片 UI 時三處行為需一致
+- **深層連結**：`?tool=<id>` 於 `loadTools` 完成後捲動並高亮對應卡片
+- **XSS 防護**：動態插入 HTML 必須通過 `esc()`
+- **評分防重複**：`localStorage` 的 `rated_tools`、`my_stars`（訪客可繞過，見 `SECURITY.md`）
+- **API 呼叫**：`apiFetch` 已設 **`credentials: 'include'`**，以傳送 JWT cookie
 
 ---
 
@@ -149,6 +165,10 @@ public/
 2. 若新增卡片內元素，確保事件委派邏輯也一起更新
 3. 新的動態文字一律套用 `esc()`
 
+### 任務收尾與 GitHub（AI 代理預設）
+
+完成可交付變更後，若使用者未要求「不要提交／不要 push」，應主動 **commit + push** 至 `origin` 目前分支；勿加入 `.env`、`.claude/`、`data/*.db`。完整步驟與例外見 **`docs/AI_SOP.md`** 第 3 節。
+
 ### 新增相依套件
 
 - 先評估是否真的需要（現有功能盡量用原生 Node.js 或已有的套件）
@@ -161,9 +181,10 @@ public/
 
 - 不要在 `app.js` 裡直接插入未 escape 的字串進 innerHTML
 - 不要把 `data/appstore.db` 加入 git commit
-- 不要在路由裡把完整錯誤 stack trace 回傳給客戶端（用 `res.status(500).json({ error: e.message })`）
+- 不要在路由 `catch` 裡把 **`e.message` 或 stack** 直接回傳給客戶端（請用 **`sendServerError(res, e)`**）
 - 不要把 `server/db.js` 改成同步 API（會破壞其他路由的 async 流程）
 - 不要在 `public/` 引入外部 CDN 資源（維持無外部相依）
+- 不要未經討論改寫產品邊界（例如開放匿名投稿、公開列表顯示 pending）
 
 ---
 
@@ -171,8 +192,13 @@ public/
 
 | 檔案 | 用途 |
 |------|------|
+| `docs/AI_SOP.md` | **AI 工作流程與產品意圖**（與本檔並讀） |
+| `docs/DECISIONS.md` | 已定案架構／產品決策（ADR 精簡版） |
+| `docs/README.md` | `docs/` 目錄說明 |
 | `README.md` | 使用者導向說明、快速開始、API 文件、部署 |
-| `CONTRIBUTING.md` | 開發流程、PR 規範、程式風格 |
-| `SECURITY.md` | 安全漏洞回報管道 |
+| `CONTRIBUTING.md` | 開發流程、PR 規範、手動測試、程式風格 |
+| `SECURITY.md` | 安全漏洞回報、威脅與取捨 |
 | `CHANGELOG.md` | 版本變更紀錄 |
 | `AGENTS.md` | 本檔：給 AI 代理的技術脈絡 |
+| `.cursor/rules/vibe-app-store.mdc` | Cursor 自動載入的規則 |
+| `CLAUDE.md` | Claude Code 自動載入的專案指引（與本檔、`docs/AI_SOP` 對齊） |

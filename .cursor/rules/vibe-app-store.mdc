@@ -1,0 +1,16 @@
+---
+description: Vibe App Store — read project docs before coding
+alwaysApply: true
+---
+
+Before making substantive code changes in this repository:
+
+1. Read `docs/AI_SOP.md` for product intent and workflow.
+2. Read `AGENTS.md` for architecture, API list, schema, and anti-patterns.
+3. If changing auth, moderation, or public API behavior, check `docs/DECISIONS.md`.
+
+Claude Code users: the same guidance is summarized in root `CLAUDE.md` (auto-loaded by that tool).
+
+Do not edit `.cursor/plans/` plan files unless the user explicitly asks. After behavior or API changes, update `CHANGELOG.md` under `[Unreleased]` and adjust `README.md` / `AGENTS.md` when needed.
+
+**Default GitHub sync:** When the task produced committable file changes and the user did not say to skip git, finish with `git add` (respect `.gitignore`), `git commit` with a clear message, and `git push` to the current branch. See `docs/AI_SOP.md` section 3 steps 7–8. Skip if no changes or user asked for local-only work.

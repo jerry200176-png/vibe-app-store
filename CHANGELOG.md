@@ -6,8 +6,14 @@
 
 ## [Unreleased]
 
+### 改善
+
+- **AI SOP**：預設任務完成後主動 `git commit` + `git push` 至 GitHub（見 `docs/AI_SOP.md`、`CLAUDE.md`、`.cursor/rules`、`AGENTS.md`、`CONTRIBUTING.md`）
+- **SECURITY.md**：新增「開發者本機設定（Claude Code）」— 提醒勿提交或分享 `.claude/`，以及密鑰外洩時應輪替
+
 ### 新增
 
+- **文件與 AI 協作**：`docs/AI_SOP.md`（代理標準作業程序）、`docs/DECISIONS.md`（ADR 精簡版）、`docs/README.md`；`CLAUDE.md`（Claude Code 自動載入）；`.cursor/rules/vibe-app-store.mdc`（Cursor 自動載入）
 - **靜態頁面**：創作者招募（`/for-creators.html`）、透明度中心（`/transparency.html`）、隱私權政策（`/privacy.html`）、使用條款（`/terms.html`）
 - **透明度 API**：`GET /api/transparency/summary` — 公開唯讀端點，回傳上架工具數、待審工具數、待處理檢舉數、累計違規數
 - **本週上新**：`GET /api/tools` 新增 `since_days` 查詢參數（1–90）；前端排序列新增「本週上新」按鈕
